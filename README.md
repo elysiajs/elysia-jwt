@@ -20,9 +20,11 @@ const app = new KingWorld()
             secret: 'MY_SECRETS'
         })
     )
-    .use(cookie)
+    .use(cookie())
     .get('/sign/:name', async ({ jwt, cookie, setCookie, params }) => {
-        setCookie('auth', await jwt.sign(params))
+        setCookie('auth', await jwt.sign(params), {
+            httpOnly: true
+        })
 
         return `Sign in as ${params.name}`
     })

@@ -10,16 +10,18 @@ const app = new KingWorld()
             secret: 'aawdaowdoj',
             sub: 'auth',
             iss: 'saltyaom.com',
-            nbf: '2h',
+            exp: '7d',
             schema: t.Object({
                 name: t.String()
             })
         })
     )
-    .use(cookie)
-    .get('/', () => 'JWT Example')
+    .use(cookie())
     .get('/sign/:name', async ({ jwt, cookie, setCookie, params }) => {
-        setCookie('auth', await jwt.sign(params))
+        setCookie('auth', await jwt.sign(params), {
+            httpOnly: true,
+            maxAge: 7 * 86400
+        })
 
         return `Sign in as ${cookie.auth}`
     })
