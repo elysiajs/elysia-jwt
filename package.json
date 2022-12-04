@@ -39,7 +39,7 @@
   "bugs": "https://github.com/elysiajs/elysia-jwt/issues",
   "homepage": "https://github.com/elysiajs/elysia-jwt",
   "keywords": [
-    "kingworld",
+    "elysia",
     "jwt",
     "auth",
     "authentication"
