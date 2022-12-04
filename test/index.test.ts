@@ -1,5 +1,4 @@
-import { KingWorld, t } from 'kingworld'
-
+import { Elysia, t } from 'elysia'
 import { jwt } from '../src'
 
 import { describe, expect, it } from 'bun:test'
@@ -16,7 +15,7 @@ const post = (path: string, body = {}) =>
 
 describe('Static Plugin', () => {
     it('sign JWT', async () => {
-        const app = new KingWorld()
+        const app = new Elysia()
             .use(
                 jwt({
                     name: 'jwt',

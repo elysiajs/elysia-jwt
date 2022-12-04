@@ -1,18 +1,18 @@
-# @kingworldjs/static
-Plugin for [kingworld](https://github.com/saltyaom/kingworld) for using JWT Authentication.
+# @elysiajs/static
+Plugin for [Elysia](https://github.com/elysiajs/elysia) for using JWT Authentication.
 
 ## Installation
 ```bash
-bun add @kingworldjs/jwt
+bun add @elysiajs/jwt
 ```
 
 ## Example
 ```typescript
-import { KingWorld, t } from 'kingworld'
-import { jwt } from '@kingworldjs/jwt'
-import { cookie } from '@kingworldjs/cookie'
+import { Elysia, t } from 'elysia'
+import { jwt } from '@elysiajs/jwt'
+import { cookie } from '@elysiajs/cookie'
 
-const app = new KingWorld()
+const app = new Elysia()
     .use(
         jwt({
             name: 'jwt',
@@ -39,7 +39,6 @@ const app = new KingWorld()
         return `Hello ${profile.name}`
     })
     .listen(8080)
-
 ```
 
 ## Config

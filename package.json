@@ -1,6 +1,6 @@
 {
-  "name": "@kingworldjs/jwt",
-  "description": "Plugin for kingworld for using JWT Authentication",
+  "name": "@elysiajs/jwt",
+  "description": "Plugin for Elysia for using JWT Authentication",
   "version": "0.0.0-experimental.0",
   "author": {
     "name": "saltyAom",
@@ -9,15 +9,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/saltyaom/kingworld-jwt"
+    "url": "https://github.com/elysiajs/elysia-jwt"
   },
   "main": "build/index.js",
   "module": "build/es/index.js",
   "esnext": "build/es/index.js",
   "types": "src/index.ts",
   "typings": "src/index.ts",
+  "dependencies": {
+    "jose": "^4.11.0"
+  },
   "devDependencies": {
-    "@kingworldjs/cookie": "^0.0.0-experimental.3",
+    "@elysiajs/cookie": "^0.0.0-experimental.3",
     "@sinclair/typebox": "0.25.8",
     "@swc/cli": "^0.1.57",
     "@swc/core": "^1.3.11",
@@ -26,15 +29,15 @@
     "@types/node": "^18.11.7",
     "bun-types": "^0.2.2",
     "eslint": "^8.26.0",
-    "kingworld": "../kingworld",
+    "elysia": "^0.0.0-experimental.56",
     "nodemon": "^2.0.20",
     "typescript": "^4.8.4"
   },
   "peerDependencies": {
-    "kingworld": ">= 0.0.0-experimental.51"
+    "elysia": "^0.0.0-experimental.56"
   },
-  "bugs": "https://github.com/SaltyAom/kingworld-jwt/issues",
-  "homepage": "https://github.com/saltyaom/kingworld-jwt",
+  "bugs": "https://github.com/elysiajs/elysia-jwt/issues",
+  "homepage": "https://github.com/elysiajs/elysia-jwt",
   "keywords": [
     "kingworld",
     "jwt",
@@ -49,8 +52,5 @@
     "build:main": "swc src --config-file .cjs.swcrc -d build",
     "build:es": "swc src --config-file .es.swcrc -d build/es",
     "release": "npm run build && npm run test && npm publish --access public"
-  },
-  "dependencies": {
-    "jose": "^4.11.0"
   }
 }

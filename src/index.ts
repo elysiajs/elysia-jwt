@@ -1,5 +1,5 @@
-import type { KingWorld, Context, UnwrapSchema } from 'kingworld'
-import { createValidationError, getSchemaValidator } from 'kingworld/src/utils'
+import type { Elysia, Context, UnwrapSchema } from 'elysia'
+import { createValidationError, getSchemaValidator } from 'elysia/src/utils'
 
 import {
     SignJWT,
@@ -87,7 +87,7 @@ export const jwt =
         ...payload
     }: // End JWT Payload
     JWTOption<Name, Schema>) =>
-    (app: KingWorld) => {
+    (app: Elysia) => {
         if (!secret) throw new Error("Secret can't be empty")
 
         const key = new TextEncoder().encode(secret)
