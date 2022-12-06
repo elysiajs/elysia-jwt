@@ -1,5 +1,10 @@
-import type { Elysia, Context, UnwrapSchema } from 'elysia'
-import { createValidationError, getSchemaValidator } from 'elysia/src/utils'
+import {
+    createValidationError,
+    getSchemaValidator,
+    type Elysia,
+    type Context,
+    type UnwrapSchema
+} from 'elysia'
 
 import {
     SignJWT,
