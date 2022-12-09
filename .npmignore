@@ -13,5 +13,9 @@ nodemon.json
 
 example
 tests
-public
-public-aliased
+src
+test
+CHANGELOG.md
+.eslintrc.js
+tsconfig.cjs.json
+tsconfig.esm.json
