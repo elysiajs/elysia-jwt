@@ -1,3 +1,7 @@
+# 0.1.0-rc.3 - 13 Dec 2022
+Improvement:
+- Add support for Elysia 0.1.0-rc.5
+
 # 0.1.0-rc.2 - 9 Dec 2022
 Fix:
 - Add main fields Bundlephobia
