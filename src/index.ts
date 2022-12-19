@@ -27,7 +27,7 @@ export interface JWTPayloadSpec {
 }
 
 export interface JWTOption<
-    Name extends string = string,
+    Name extends string | undefined = 'jwt',
     Schema extends TSchema | undefined = undefined
 > extends JWSHeaderParameters,
         Omit<JWTPayload, 'nbf' | 'exp'> {
@@ -49,7 +49,7 @@ export interface JWTOption<
      *     })
      * ```
      */
-    name: Name
+    name?: Name
     /**
      * JWT Secret
      */
@@ -76,10 +76,10 @@ export interface JWTOption<
 
 export const jwt =
     <
-        Name extends string = string,
+        Name extends string | undefined,
         Schema extends TSchema | undefined = undefined
     >({
-        name,
+        name = 'jwt',
         secret,
         // Start JWT Header
         alg = 'HS256',
@@ -116,7 +116,7 @@ export const jwt =
               )
             : undefined
 
-        return app.decorate(name, {
+        return app.decorate(name as Name extends string ? Name : 'jwt', {
             sign: (
                 morePayload: UnwrapSchema<Schema, Record<string, string>> &
                     JWTPayloadSpec

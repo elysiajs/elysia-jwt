@@ -5,7 +5,6 @@ import { jwt } from '../src/index'
 const app = new Elysia()
     .use(
         jwt({
-            name: 'jwt',
             secret: 'aawdaowdoj',
             sub: 'auth',
             iss: 'saltyaom.com',
