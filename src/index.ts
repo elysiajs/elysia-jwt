@@ -3,7 +3,7 @@ import {
     getSchemaValidator,
     type Elysia,
     type Context,
-    type UnwrapSchema
+    ElysiaInstance
 } from 'elysia'
 
 import {
@@ -15,6 +15,11 @@ import {
 
 import { Type as t } from '@sinclair/typebox'
 import type { Static, TObject, TSchema } from '@sinclair/typebox'
+
+type UnwrapSchema<
+    Schema extends TSchema | undefined,
+    Fallback = unknown
+> = Schema extends TSchema ? Static<NonNullable<Schema>> : Fallback
 
 export interface JWTPayloadSpec {
     iss?: string
@@ -100,7 +105,7 @@ export const jwt =
         const validator = schema
             ? getSchemaValidator(
                   t.Union([
-                      schema,
+                      schema as any,
                       t.Object({
                           iss: t.Optional(t.String()),
                           sub: t.Optional(t.String()),
@@ -112,7 +117,8 @@ export const jwt =
                           exp: t.Optional(t.Union([t.String(), t.Number()])),
                           iat: t.Optional(t.String())
                       })
-                  ])
+                  ]) as any,
+                  {}
               )
             : undefined
 
@@ -138,11 +144,7 @@ export const jwt =
             },
             verify: async (
                 jwt?: string
-            ): Promise<
-                | (UnwrapSchema<Schema, Record<string, string>> &
-                      JWTPayloadSpec)
-                | false
-            > => {
+            ): Promise<(UnwrapSchema<Schema, Record<string, string>> & JWTPayloadSpec) | false> => {
                 if (!jwt) return false
 
                 try {

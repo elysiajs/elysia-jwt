@@ -38,15 +38,15 @@
     "jose": "^4.11.1"
   },
   "devDependencies": {
-    "@elysiajs/cookie": "^0.1.0-rc.2",
-    "@sinclair/typebox": "0.25.10",
+    "@elysiajs/cookie": "^0.1.1",
+    "@sinclair/typebox": "^0.25.21",
     "@types/node": "^18.11.7",
-    "bun-types": "^0.2.2",
+    "bun-types": "^0.5.0",
     "eslint": "^8.26.0",
-    "elysia": "^0.1.0-rc.5",
-    "typescript": "^4.8.4"
+    "elysia": "^0.2.7",
+    "typescript": "^4.9.4"
   },
   "peerDependencies": {
-    "elysia": ">= 0.1.0-rc.5"
+    "elysia": ">= 0.2.0"
   }
 }

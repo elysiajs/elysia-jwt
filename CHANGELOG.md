@@ -1,3 +1,7 @@
+# 0.2.0 - 17 Feb 2023
+Improvement:
+- Add support for Elysia >= 0.2.0
+
 # 0.1.0-rc.4 - 19 Dec 2022
 Improvement:
 - Make `name` optional
