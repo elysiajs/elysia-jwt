@@ -81,10 +81,10 @@ export interface JWTOption<
 
 export const jwt =
     <
-        Name extends string | undefined,
+        Name extends string = 'jwt',
         Schema extends TSchema | undefined = undefined
     >({
-        name = 'jwt',
+        name = 'jwt' as Name,
         secret,
         // Start JWT Header
         alg = 'HS256',
@@ -144,7 +144,11 @@ export const jwt =
             },
             verify: async (
                 jwt?: string
-            ): Promise<(UnwrapSchema<Schema, Record<string, string>> & JWTPayloadSpec) | false> => {
+            ): Promise<
+                | (UnwrapSchema<Schema, Record<string, string>> &
+                      JWTPayloadSpec)
+                | false
+            > => {
                 if (!jwt) return false
 
                 try {

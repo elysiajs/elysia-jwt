@@ -1,7 +1,7 @@
 {
   "name": "@elysiajs/jwt",
   "description": "Plugin for Elysia for using JWT Authentication",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "saltyAom",
     "url": "https://github.com/SaltyAom",
@@ -35,7 +35,7 @@
     "release": "npm run build && npm run test && npm publish --access public"
   },
   "dependencies": {
-    "jose": "^4.11.1"
+    "jose": "^4.12.0"
   },
   "devDependencies": {
     "@elysiajs/cookie": "^0.1.1",
