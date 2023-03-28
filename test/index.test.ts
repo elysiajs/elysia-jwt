@@ -3,9 +3,9 @@ import { jwt } from '../src'
 
 import { describe, expect, it } from 'bun:test'
 
-const req = (path: string) => new Request(path)
+const req = (path: string) => new Request(`http://localhost${path}`)
 const post = (path: string, body = {}) =>
-    new Request(path, {
+    new Request(`http://localhost${path}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
