@@ -1,4 +1,8 @@
-# 0.2.0 - 17 Feb 2023
+# 0.3.0 - 29 Mar 2023
+Fix:
+- Update to support Elysia 0.3
+
+# 0.2.1 - 17 Feb 2023
 Fix:
 - JWT namespace wrong infer type
 
