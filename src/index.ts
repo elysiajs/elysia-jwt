@@ -1,5 +1,5 @@
 import {
-    createValidationError,
+    ValidationError,
     getSchemaValidator,
     type Elysia,
     type Context,
@@ -155,7 +155,7 @@ export const jwt =
                     const data: any = (await jwtVerify(jwt, key)).payload
 
                     if (validator && !validator!.Check(data))
-                        throw createValidationError('JWT', validator, data)
+                        throw new ValidationError('JWT', validator, data)
 
                     return data
                 } catch (_) {
