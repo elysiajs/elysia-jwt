@@ -1,7 +1,7 @@
 {
   "name": "@elysiajs/jwt",
   "description": "Plugin for Elysia for using JWT Authentication",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "saltyAom",
     "url": "https://github.com/SaltyAom",
