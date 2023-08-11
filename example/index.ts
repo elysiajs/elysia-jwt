@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia'
 import { cookie } from '@elysiajs/cookie'
-import { jwt } from '../src/index'
+import { jwt } from '../src'
 
 const app = new Elysia()
     .use(

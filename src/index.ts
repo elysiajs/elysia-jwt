@@ -1,7 +1,7 @@
 import {
     ValidationError,
     getSchemaValidator,
-    type Elysia,
+    Elysia,
     type Context,
     ElysiaInstance
 } from 'elysia'
@@ -79,90 +79,99 @@ export interface JWTOption<
     exp?: string | number
 }
 
-export const jwt =
-    <
-        Name extends string = 'jwt',
-        Schema extends TSchema | undefined = undefined
-    >({
-        name = 'jwt' as Name,
-        secret,
-        // Start JWT Header
-        alg = 'HS256',
-        crit,
-        schema,
-        // End JWT Header
-        // Start JWT Payload
-        nbf,
-        exp,
-        ...payload
-    }: // End JWT Payload
-    JWTOption<Name, Schema>) =>
-    (app: Elysia) => {
-        if (!secret) throw new Error("Secret can't be empty")
+export const jwt = <
+    Name extends string = 'jwt',
+    Schema extends TSchema | undefined = undefined
+>({
+    name = 'jwt' as Name,
+    secret,
+    // Start JWT Header
+    alg = 'HS256',
+    crit,
+    schema,
+    // End JWT Header
+    // Start JWT Payload
+    nbf,
+    exp,
+    ...payload
+}: // End JWT Payload
+JWTOption<Name, Schema>) => {
+    if (!secret) throw new Error("Secret can't be empty")
 
-        const key = new TextEncoder().encode(secret)
+    const key = new TextEncoder().encode(secret)
 
-        const validator = schema
-            ? getSchemaValidator(
-                  t.Union([
-                      schema as any,
-                      t.Object({
-                          iss: t.Optional(t.String()),
-                          sub: t.Optional(t.String()),
-                          aud: t.Optional(
-                              t.Union([t.String(), t.Array(t.String())])
-                          ),
-                          jti: t.Optional(t.String()),
-                          nbf: t.Optional(t.Union([t.String(), t.Number()])),
-                          exp: t.Optional(t.Union([t.String(), t.Number()])),
-                          iat: t.Optional(t.String())
-                      })
-                  ]) as any,
-                  {}
-              )
-            : undefined
+    const validator = schema
+        ? getSchemaValidator(
+              t.Union([
+                  schema as any,
+                  t.Object({
+                      iss: t.Optional(t.String()),
+                      sub: t.Optional(t.String()),
+                      aud: t.Optional(
+                          t.Union([t.String(), t.Array(t.String())])
+                      ),
+                      jti: t.Optional(t.String()),
+                      nbf: t.Optional(t.Union([t.String(), t.Number()])),
+                      exp: t.Optional(t.Union([t.String(), t.Number()])),
+                      iat: t.Optional(t.String())
+                  })
+              ]) as any,
+              {}
+          )
+        : undefined
 
-        return app.decorate(name as Name extends string ? Name : 'jwt', {
-            sign: (
-                morePayload: UnwrapSchema<Schema, Record<string, string>> &
-                    JWTPayloadSpec
-            ) => {
-                let jwt = new SignJWT({
-                    ...payload,
-                    ...morePayload,
-                    nbf: undefined,
-                    exp: undefined
-                }).setProtectedHeader({
-                    alg,
-                    crit
-                })
+    return new Elysia({
+        name: '@elysiajs/jwt',
+        seed: {
+            name,
+            secret,
+            alg,
+            crit,
+            schema,
+            nbf,
+            exp,
+            ...payload
+        }
+    }).decorate(name as Name extends string ? Name : 'jwt', {
+        sign: (
+            morePayload: UnwrapSchema<Schema, Record<string, string>> &
+                JWTPayloadSpec
+        ) => {
+            let jwt = new SignJWT({
+                ...payload,
+                ...morePayload,
+                nbf: undefined,
+                exp: undefined
+            }).setProtectedHeader({
+                alg,
+                crit
+            })
 
-                if (nbf) jwt = jwt.setNotBefore(nbf)
-                if (exp) jwt = jwt.setExpirationTime(exp)
+            if (nbf) jwt = jwt.setNotBefore(nbf)
+            if (exp) jwt = jwt.setExpirationTime(exp)
 
-                return jwt.sign(key)
-            },
-            verify: async (
-                jwt?: string
-            ): Promise<
-                | (UnwrapSchema<Schema, Record<string, string>> &
-                      JWTPayloadSpec)
-                | false
-            > => {
-                if (!jwt) return false
+            return jwt.sign(key)
+        },
+        verify: async (
+            jwt?: string
+        ): Promise<
+            | (UnwrapSchema<Schema, Record<string, string>> & JWTPayloadSpec)
+            | false
+        > => {
+            if (!jwt) return false
 
-                try {
-                    const data: any = (await jwtVerify(jwt, key)).payload
+            try {
+                const data: any = (await jwtVerify(jwt, key)).payload
 
-                    if (validator && !validator!.Check(data))
-                        throw new ValidationError('JWT', validator, data)
+                if (validator && !validator!.Check(data))
+                    throw new ValidationError('JWT', validator, data)
 
-                    return data
-                } catch (_) {
-                    return false
-                }
+                return data
+            } catch (_) {
+                return false
             }
-        })
-    }
+        }
+    })
+}
 
 export default jwt
