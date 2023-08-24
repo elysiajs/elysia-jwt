@@ -102,7 +102,7 @@ JWTOption<Name, Schema>) => {
 
     const validator = schema
         ? getSchemaValidator(
-              t.Union([
+              t.Intersect([
                   schema as any,
                   t.Object({
                       iss: t.Optional(t.String()),
