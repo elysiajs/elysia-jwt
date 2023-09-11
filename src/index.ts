@@ -2,19 +2,18 @@ import {
     ValidationError,
     getSchemaValidator,
     Elysia,
-    type Context,
-    ElysiaInstance
 } from 'elysia'
 
 import {
     SignJWT,
     jwtVerify,
     type JWTPayload,
-    type JWSHeaderParameters
+    type JWSHeaderParameters,
+    type KeyLike
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
-import type { Static, TObject, TSchema } from '@sinclair/typebox'
+import type { Static, TSchema } from '@sinclair/typebox'
 
 type UnwrapSchema<
     Schema extends TSchema | undefined,
@@ -58,7 +57,7 @@ export interface JWTOption<
     /**
      * JWT Secret
      */
-    secret: string
+    secret: string | Uint8Array | KeyLike
     /**
      * Type strict validation for JWT payload
      */
@@ -98,12 +97,14 @@ export const jwt = <
 JWTOption<Name, Schema>) => {
     if (!secret) throw new Error("Secret can't be empty")
 
-    const key = new TextEncoder().encode(secret)
+    const key = typeof secret === 'string'
+        ? new TextEncoder().encode(secret)
+        : secret;
 
     const validator = schema
         ? getSchemaValidator(
               t.Intersect([
-                  schema as any,
+                  schema,
                   t.Object({
                       iss: t.Optional(t.String()),
                       sub: t.Optional(t.String()),
@@ -115,7 +116,7 @@ JWTOption<Name, Schema>) => {
                       exp: t.Optional(t.Union([t.String(), t.Number()])),
                       iat: t.Optional(t.String())
                   })
-              ]) as any,
+              ]),
               {}
           )
         : undefined
