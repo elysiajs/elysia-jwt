@@ -23,16 +23,12 @@ describe('Static Plugin', () => {
                 })
             )
             .post('/validate', ({ jwt, body }) => jwt.sign(body), {
-                schema: {
-                    body: t.Object({
-                        name: t.String()
-                    })
-                }
+                body: t.Object({
+                    name: t.String()
+                })
             })
             .post('/validate', ({ jwt, body: { name } }) => jwt.verify(name), {
-                schema: {
-                    body: t.Object({ name: t.String() })
-                }
+                body: t.Object({ name: t.String() })
             })
 
         const name = 'Shirokami'
