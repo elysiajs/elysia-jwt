@@ -43,6 +43,8 @@
     "@elysiajs/cookie": "^0.3.0",
     "@sinclair/typebox": "^0.30.4",
     "@types/node": "^20.1.4",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
     "bun-types": "^0.5.8",
     "elysia": "0.6.6",
     "eslint": "^8.40.0",
