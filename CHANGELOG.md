@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.1 - 11 Sep 2023
+## 0.6.4 - 11 Sep 2023
 -[#11](https://github.com/elysiajs/elysia-jwt/pull/11) Remove unused imports
 -[#10](https://github.com/elysiajs/elysia-jwt/pull/10) Meaningful type import
 -[#9](https://github.com/elysiajs/elysia-jwt/pull/9) s  Add missing ESLint plugins
