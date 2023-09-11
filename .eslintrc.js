@@ -16,6 +16,9 @@ module.exports = {
         "@typescript-eslint"
     ],
     "rules": {
+        "@typescript-eslint/consistent-type-imports": ["error", {
+            "prefer": "type-imports",
+        }],
         "@typescript-eslint/ban-types": 'off',
         '@typescript-eslint/no-explicit-any': 'off'
     },
