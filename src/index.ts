@@ -2,8 +2,6 @@ import {
     ValidationError,
     getSchemaValidator,
     Elysia,
-    type Context,
-    ElysiaInstance
 } from 'elysia'
 
 import {
@@ -15,7 +13,7 @@ import {
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
-import type { Static, TObject, TSchema } from '@sinclair/typebox'
+import type { Static, TSchema } from '@sinclair/typebox'
 
 type UnwrapSchema<
     Schema extends TSchema | undefined,
