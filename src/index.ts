@@ -103,7 +103,7 @@ JWTOption<Name, Schema>) => {
     const validator = schema
         ? getSchemaValidator(
               t.Union([
-                  schema as any,
+                  schema,
                   t.Object({
                       iss: t.Optional(t.String()),
                       sub: t.Optional(t.String()),
@@ -115,7 +115,7 @@ JWTOption<Name, Schema>) => {
                       exp: t.Optional(t.Union([t.String(), t.Number()])),
                       iat: t.Optional(t.String())
                   })
-              ]) as any,
+              ]),
               {}
           )
         : undefined
