@@ -10,7 +10,8 @@ import {
     SignJWT,
     jwtVerify,
     type JWTPayload,
-    type JWSHeaderParameters
+    type JWSHeaderParameters,
+    type KeyLike
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -58,7 +59,7 @@ export interface JWTOption<
     /**
      * JWT Secret
      */
-    secret: string
+    secret: string | Uint8Array | KeyLike
     /**
      * Type strict validation for JWT payload
      */
@@ -98,7 +99,9 @@ export const jwt = <
 JWTOption<Name, Schema>) => {
     if (!secret) throw new Error("Secret can't be empty")
 
-    const key = new TextEncoder().encode(secret)
+    const key = typeof secret === 'string'
+        ? new TextEncoder().encode(secret)
+        : secret;
 
     const validator = schema
         ? getSchemaValidator(
