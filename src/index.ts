@@ -1,8 +1,4 @@
-import {
-    ValidationError,
-    getSchemaValidator,
-    Elysia,
-} from 'elysia'
+import { Elysia, ValidationError, getSchemaValidator } from 'elysia'
 
 import {
     SignJWT,
@@ -97,9 +93,8 @@ export const jwt = <
 JWTOption<Name, Schema>) => {
     if (!secret) throw new Error("Secret can't be empty")
 
-    const key = typeof secret === 'string'
-        ? new TextEncoder().encode(secret)
-        : secret;
+    const key =
+        typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
 
     const validator = schema
         ? getSchemaValidator(
