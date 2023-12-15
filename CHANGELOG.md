@@ -1,4 +1,12 @@
-# Changelog
+# 0.7.1 - 15 Dec 2023
+- Minimum support for TypeScript to >= 5.0
+- Minimum support for Elysia >= 0.7.20
+
+# 0.7.0 - 20 Sep 2023
+- Add support for Elysia 0.7
+
+# 0.7.0-beta.0 - 18 Sep 2023
+- Add support for Elysia 0.7
 
 ## 0.6.4 - 11 Sep 2023
 -[#11](https://github.com/elysiajs/elysia-jwt/pull/11) Remove unused imports

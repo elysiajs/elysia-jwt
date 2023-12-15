@@ -1,10 +1,10 @@
 import { Elysia, t } from 'elysia'
-import { cookie } from '@elysiajs/cookie'
 import { jwt } from '../src'
 
 const app = new Elysia()
     .use(
         jwt({
+            name: 'jwt2',
             secret: 'aawdaowdoj',
             sub: 'auth',
             iss: 'saltyaom.com',
@@ -14,17 +14,17 @@ const app = new Elysia()
             })
         })
     )
-    .use(cookie())
-    .get('/sign/:name', async ({ jwt, cookie, setCookie, params }) => {
-        setCookie('auth', await jwt.sign(params), {
+    .get('/sign/:name', async ({ jwt2, cookie: { auth }, params }) => {
+        auth.set({
+            value: await jwt2.sign(params),
             httpOnly: true,
             maxAge: 7 * 86400
         })
 
-        return `Sign in as ${cookie.auth}`
+        return `Sign in as ${auth.value}`
     })
-    .get('/profile', async ({ jwt, set, cookie: { auth } }) => {
-        const profile = await jwt.verify(auth)
+    .get('/profile', async ({ jwt2, set, cookie: { auth } }) => {
+        const profile = await jwt2.verify(auth.value)
 
         if (!profile) {
             set.status = 401
