@@ -130,7 +130,7 @@ JWTOption<Name, Schema>) => {
         }
     }).decorate(name as Name extends string ? Name : 'jwt', {
         sign: (
-            morePayload: UnwrapSchema<Schema, Record<string, string>> &
+            morePayload: UnwrapSchema<Schema, Record<string, string | number>> &
                 JWTPayloadSpec
         ) => {
             let jwt = new SignJWT({
@@ -151,7 +151,7 @@ JWTOption<Name, Schema>) => {
         verify: async (
             jwt?: string
         ): Promise<
-            | (UnwrapSchema<Schema, Record<string, string>> & JWTPayloadSpec)
+            | (UnwrapSchema<Schema, Record<string, string | number>> & JWTPayloadSpec)
             | false
         > => {
             if (!jwt) return false
