@@ -1,3 +1,8 @@
+
+# 0.8.0-rc.0 - 15 Dec 2023
+Change:
+- Add support for Elysia 0.8
+
 # 0.7.1 - 15 Dec 2023
 - Minimum support for TypeScript to >= 5.0
 - Minimum support for Elysia >= 0.7.20
