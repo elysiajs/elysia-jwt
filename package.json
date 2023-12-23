@@ -1,7 +1,7 @@
 {
     "name": "@elysiajs/jwt",
     "description": "Plugin for Elysia for using JWT Authentication",
-    "version": "0.8.0-rc.0",
+    "version": "0.8.0",
     "author": {
         "name": "saltyAom",
         "url": "https://github.com/SaltyAom",
@@ -45,12 +45,12 @@
         "@typescript-eslint/eslint-plugin": "^6.6.0",
         "@typescript-eslint/parser": "^6.6.0",
         "bun-types": "^0.5.8",
-        "elysia": "0.8.0-rc.0",
+        "elysia": "0.8.0",
         "eslint": "^8.40.0",
         "rimraf": "4.3",
         "typescript": "^5.1.6"
     },
     "peerDependencies": {
-        "elysia": ">= 0.8.0-rc.0"
+        "elysia": ">= 0.8.0"
     }
 }
