@@ -52,8 +52,19 @@ export interface JWTOption<
     name?: Name
     /**
      * JWT Secret
+     * Only `secret` or both `privateKey`, `publicKey` must be set
      */
-    secret: string | Uint8Array | KeyLike
+    secret?: string | Uint8Array | KeyLike
+    /**
+     * JWT Private Key
+     * Only `secret` or both `privateKey`, `publicKey` must be set
+     */
+    privateKey?: Uint8Array | KeyLike
+    /**
+     * JWT Public Key
+     * Only `secret` or both `privateKey`, `publicKey` must be set
+     */
+    publicKey?: Uint8Array | KeyLike
     /**
      * Type strict validation for JWT payload
      */
@@ -80,6 +91,8 @@ export const jwt = <
 >({
     name = 'jwt' as Name,
     secret,
+    publicKey,
+    privateKey,
     // Start JWT Header
     alg = 'HS256',
     crit,
@@ -91,10 +104,28 @@ export const jwt = <
     ...payload
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
-    if (!secret) throw new Error("Secret can't be empty")
-
     const key =
         typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
+
+    let asymmetric = false
+
+    if (secret && (privateKey || publicKey)) {
+        throw new Error("When using asymmetric algorithm, only `privateKey` and `publicKey` is accepted")
+    }
+
+    if (privateKey && !publicKey) {
+        throw new Error("When using asymmetric algorithm, both `privateKey` and `publicKey` must be set. Public key is missing")
+    }
+
+    if (publicKey && !privateKey) {
+        throw new Error("When using asymmetric algorithm, both `privateKey` and `publicKey` must be set. Private key is missing")
+    }
+
+    if (privateKey && privateKey) {
+        asymmetric = true
+    } else if (!secret) {
+        throw new Error("Secret can't be empty")
+    }
 
     const validator = schema
         ? getSchemaValidator(
@@ -146,7 +177,7 @@ JWTOption<Name, Schema>) => {
             if (nbf) jwt = jwt.setNotBefore(nbf)
             if (exp) jwt = jwt.setExpirationTime(exp)
 
-            return jwt.sign(key)
+            return jwt.sign(asymmetric ? privateKey! : key!)
         },
         verify: async (
             jwt?: string
@@ -158,7 +189,7 @@ JWTOption<Name, Schema>) => {
             if (!jwt) return false
 
             try {
-                const data: any = (await jwtVerify(jwt, key)).payload
+                const data: any = (await jwtVerify(jwt, asymmetric ? publicKey! : key!)).payload
 
                 if (validator && !validator!.Check(data))
                     throw new ValidationError('JWT', validator, data)
