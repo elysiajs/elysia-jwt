@@ -18,7 +18,8 @@ const app = new Elysia()
         auth.set({
             value: await jwt2.sign(params),
             httpOnly: true,
-            maxAge: 7 * 86400
+            maxAge: 7 * 86400,
+	    path: '/'
         })
 
         return `Sign in as ${auth.value}`
