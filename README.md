@@ -1,4 +1,4 @@
-# @elysiajs/static
+# @elysiajs/jwt
 
 Plugin for [Elysia](https://github.com/elysiajs/elysia) for using JWT Authentication.
 
