@@ -22,7 +22,7 @@ export interface JWTPayloadSpec {
     aud?: string | string[]
     jti?: string
     nbf?: number
-    exp?: number
+    exp?: number | string
     iat?: number
 }
 
@@ -145,6 +145,7 @@ JWTOption<Name, Schema>) => {
 
             if (nbf) jwt = jwt.setNotBefore(nbf)
             if (exp) jwt = jwt.setExpirationTime(exp)
+            if (morePayload.exp) jwt = jwt.setExpirationTime(morePayload.exp)
 
             return jwt.sign(key)
         },
