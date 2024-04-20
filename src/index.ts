@@ -5,7 +5,8 @@ import {
     jwtVerify,
     type JWTPayload,
     type JWSHeaderParameters,
-    type KeyLike
+    type KeyLike,
+    errors,
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -158,7 +159,28 @@ JWTOption<Name, Schema>) => {
             if (!jwt) return false
 
             try {
-                const data: any = (await jwtVerify(jwt, key)).payload
+                const data: any = (await jwtVerify(jwt, key)
+                    .catch(async (error) => {
+                        if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
+                            for await (const publicKey of error) {
+                                try {
+                                    return await jwtVerify(jwt, publicKey)
+                                }
+                                catch (innerError) {
+                                    if (innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+                                        continue;
+                                    }
+
+                                    throw innerError
+                                }
+                            }
+
+                            throw new errors.JWSSignatureVerificationFailed()
+                        }
+
+                        throw error
+                    })
+                ).payload
 
                 if (validator && !validator!.Check(data))
                     throw new ValidationError('JWT', validator, data)
