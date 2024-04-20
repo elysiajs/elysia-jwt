@@ -7,6 +7,7 @@ import {
     type JWSHeaderParameters,
     type KeyLike,
     errors,
+    type JWTVerifyGetKey,
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -31,7 +32,7 @@ export interface JWTOption<
     Name extends string | undefined = 'jwt',
     Schema extends TSchema | undefined = undefined
 > extends JWSHeaderParameters,
-        Omit<JWTPayload, 'nbf' | 'exp'> {
+    Omit<JWTPayload, 'nbf' | 'exp'> {
     /**
      * Name to decorate method as
      *
@@ -54,7 +55,7 @@ export interface JWTOption<
     /**
      * JWT Secret
      */
-    secret: string | Uint8Array | KeyLike
+    secret: string | Uint8Array | KeyLike | JWTVerifyGetKey
     /**
      * Type strict validation for JWT payload
      */
@@ -91,7 +92,7 @@ export const jwt = <
     exp,
     ...payload
 }: // End JWT Payload
-JWTOption<Name, Schema>) => {
+    JWTOption<Name, Schema>) => {
     if (!secret) throw new Error("Secret can't be empty")
 
     const key =
@@ -99,22 +100,22 @@ JWTOption<Name, Schema>) => {
 
     const validator = schema
         ? getSchemaValidator(
-              t.Intersect([
-                  schema,
-                  t.Object({
-                      iss: t.Optional(t.String()),
-                      sub: t.Optional(t.String()),
-                      aud: t.Optional(
-                          t.Union([t.String(), t.Array(t.String())])
-                      ),
-                      jti: t.Optional(t.String()),
-                      nbf: t.Optional(t.Union([t.String(), t.Number()])),
-                      exp: t.Optional(t.Union([t.String(), t.Number()])),
-                      iat: t.Optional(t.String())
-                  })
-              ]),
-              {}
-          )
+            t.Intersect([
+                schema,
+                t.Object({
+                    iss: t.Optional(t.String()),
+                    sub: t.Optional(t.String()),
+                    aud: t.Optional(
+                        t.Union([t.String(), t.Array(t.String())])
+                    ),
+                    jti: t.Optional(t.String()),
+                    nbf: t.Optional(t.Union([t.String(), t.Number()])),
+                    exp: t.Optional(t.Union([t.String(), t.Number()])),
+                    iat: t.Optional(t.String())
+                })
+            ]),
+            {}
+        )
         : undefined
 
     return new Elysia({
@@ -153,7 +154,7 @@ JWTOption<Name, Schema>) => {
             jwt?: string
         ): Promise<
             | (UnwrapSchema<Schema, Record<string, string | number>> &
-                  JWTPayloadSpec)
+                JWTPayloadSpec)
             | false
         > => {
             if (!jwt) return false
