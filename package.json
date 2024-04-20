@@ -47,12 +47,12 @@
     "@types/node": "^20.1.4",
     "@typescript-eslint/eslint-plugin": "^6.6.0",
     "@typescript-eslint/parser": "^6.6.0",
-    "elysia": "1.0.2",
+    "elysia": "1.0.13",
     "eslint": "^8.40.0",
     "rimraf": "4.3",
     "typescript": "^5.1.6"
   },
   "peerDependencies": {
-    "elysia": ">= 1.0.2"
+    "elysia": ">= 1.0.13"
   }
 }

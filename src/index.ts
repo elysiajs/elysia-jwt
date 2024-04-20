@@ -103,7 +103,8 @@ export const jwt = <
     exp,
     ...payload
 }: // End JWT Payload
-    JWTOption<Name, Schema>) => {
+    JWTOption<Name, Schema>
+) => (app: Elysia) => {
     if (!secret) throw new Error("Secret can't be empty")
 
     const key =
@@ -129,19 +130,20 @@ export const jwt = <
         )
         : undefined
 
-    return new Elysia({
-        name: '@elysiajs/jwt',
-        seed: {
-            name,
-            secret,
-            alg,
-            crit,
-            schema,
-            nbf,
-            exp,
-            ...payload
-        }
-    }).decorate(name as Name extends string ? Name : 'jwt', {
+        // return new Elysia({
+        //     name: '@elysiajs/jwt',
+        //     seed: {
+        //         name,
+        //         secret,
+        //         alg,
+        //         crit,
+        //         schema,
+        //         nbf,
+        //         exp,
+        //         ...payload
+        //     }
+        // })
+    return app.decorate(name as Name extends string ? Name : 'jwt', {
         sign: (
             morePayload: UnwrapSchema<Schema, Record<string, string | number>> &
                 JWTPayloadSpec
