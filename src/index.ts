@@ -8,6 +8,8 @@ import {
     type KeyLike,
     errors,
     type JWTVerifyGetKey,
+    type JWTVerifyOptions,
+    type JWTVerifyResult,
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -97,7 +99,11 @@ export const jwt = <
 
     const key =
         typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
-    const verifier = typeof key === 'function' ? (jwt: string) => jwtVerify(jwt, key) : (jwt: string) => jwtVerify(jwt, key);
+    const verifier: {
+        (jwt: string, options?: JWTVerifyOptions): Promise<JWTVerifyResult>
+    } = typeof key === 'function'
+        ? (jwt, options) => jwtVerify(jwt, key, options)
+        : (jwt, options) => jwtVerify(jwt, key, options);
     const validator = schema
         ? getSchemaValidator(
             t.Intersect([
@@ -135,6 +141,10 @@ export const jwt = <
             morePayload: UnwrapSchema<Schema, Record<string, string | number>> &
                 JWTPayloadSpec
         ) => {
+            if (typeof key === 'function') {
+                throw new TypeError('Cannot use that secret to sign, likely only verify.');
+            }
+
             let jwt = new SignJWT({
                 ...payload,
                 ...morePayload,
@@ -148,14 +158,11 @@ export const jwt = <
             if (nbf) jwt = jwt.setNotBefore(nbf)
             if (exp) jwt = jwt.setExpirationTime(exp)
 
-            if (!('type' in key) && !(key instanceof Uint8Array)) {
-                throw new TypeError('Cannot use that secret to sign, likely only verify.');
-            }
-
             return jwt.sign(key)
         },
         verify: async (
-            jwt?: string
+            jwt?: string,
+            options?: JWTVerifyOptions,
         ): Promise<
             | (UnwrapSchema<Schema, Record<string, string | number>> &
                 JWTPayloadSpec)
@@ -165,12 +172,12 @@ export const jwt = <
 
             try {
                 // note: this is to satisfy typescript.
-                const data: any = (await verifier(jwt)
+                const data: any = (await verifier(jwt, options)
                     .catch(async (error) => {
                         if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
                             for await (const publicKey of error) {
                                 try {
-                                    return await jwtVerify(jwt, publicKey)
+                                    return await jwtVerify(jwt, publicKey, options)
                                 }
                                 catch (innerError: any) {
                                     if ('code' in innerError && innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
