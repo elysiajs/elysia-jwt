@@ -5,7 +5,11 @@ import {
     jwtVerify,
     type JWTPayload,
     type JWSHeaderParameters,
-    type KeyLike
+    type KeyLike,
+    errors,
+    type JWTVerifyGetKey,
+    type JWTVerifyOptions,
+    type JWTVerifyResult,
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -30,7 +34,7 @@ export interface JWTOption<
     Name extends string | undefined = 'jwt',
     Schema extends TSchema | undefined = undefined
 > extends JWSHeaderParameters,
-        Omit<JWTPayload, 'nbf' | 'exp'> {
+    Omit<JWTPayload, 'nbf' | 'exp'> {
     /**
      * Name to decorate method as
      *
@@ -53,7 +57,7 @@ export interface JWTOption<
     /**
      * JWT Secret
      */
-    secret: string | Uint8Array | KeyLike
+    secret: string | Uint8Array | KeyLike | JWTVerifyGetKey
     /**
      * Type strict validation for JWT payload
      */
@@ -74,6 +78,15 @@ export interface JWTOption<
     exp?: string | number
 }
 
+const verifier = (key: Uint8Array | KeyLike | JWTVerifyGetKey): {
+    (jwt: string, options?: JWTVerifyOptions): Promise<JWTVerifyResult>
+} => {
+    return typeof key === 'function'
+        ? (jwt, options) => jwtVerify<any>(jwt, key, options)
+        : (jwt, options) => jwtVerify(jwt, key, options)
+        ;
+}
+
 export const jwt = <
     const Name extends string = 'jwt',
     const Schema extends TSchema | undefined = undefined
@@ -90,49 +103,55 @@ export const jwt = <
     exp,
     ...payload
 }: // End JWT Payload
-JWTOption<Name, Schema>) => {
+    JWTOption<Name, Schema>
+) => (app: Elysia) => {
     if (!secret) throw new Error("Secret can't be empty")
 
     const key =
         typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
-
+    const verifyKey = verifier(key);
     const validator = schema
         ? getSchemaValidator(
-              t.Intersect([
-                  schema,
-                  t.Object({
-                      iss: t.Optional(t.String()),
-                      sub: t.Optional(t.String()),
-                      aud: t.Optional(
-                          t.Union([t.String(), t.Array(t.String())])
-                      ),
-                      jti: t.Optional(t.String()),
-                      nbf: t.Optional(t.Union([t.String(), t.Number()])),
-                      exp: t.Optional(t.Union([t.String(), t.Number()])),
-                      iat: t.Optional(t.String())
-                  })
-              ]),
-              {}
-          )
+            t.Intersect([
+                schema,
+                t.Object({
+                    iss: t.Optional(t.String()),
+                    sub: t.Optional(t.String()),
+                    aud: t.Optional(
+                        t.Union([t.String(), t.Array(t.String())])
+                    ),
+                    jti: t.Optional(t.String()),
+                    nbf: t.Optional(t.Union([t.String(), t.Number()])),
+                    exp: t.Optional(t.Union([t.String(), t.Number()])),
+                    iat: t.Optional(t.String())
+                })
+            ]),
+            {}
+        )
         : undefined
 
-    return new Elysia({
-        name: '@elysiajs/jwt',
-        seed: {
-            name,
-            secret,
-            alg,
-            crit,
-            schema,
-            nbf,
-            exp,
-            ...payload
-        }
-    }).decorate(name as Name extends string ? Name : 'jwt', {
+        // return new Elysia({
+        //     name: '@elysiajs/jwt',
+        //     seed: {
+        //         name,
+        //         secret,
+        //         alg,
+        //         crit,
+        //         schema,
+        //         nbf,
+        //         exp,
+        //         ...payload
+        //     }
+        // })
+    return app.decorate(name as Name extends string ? Name : 'jwt', {
         sign: (
             morePayload: UnwrapSchema<Schema, Record<string, string | number>> &
                 JWTPayloadSpec
         ) => {
+            if (typeof key === 'function') {
+                throw new TypeError('Cannot use that secret to sign, likely only verify.');
+            }
+
             let jwt = new SignJWT({
                 ...payload,
                 ...morePayload,
@@ -149,16 +168,40 @@ JWTOption<Name, Schema>) => {
             return jwt.sign(key)
         },
         verify: async (
-            jwt?: string
+            jwt?: string,
+            options?: JWTVerifyOptions,
         ): Promise<
             | (UnwrapSchema<Schema, Record<string, string | number>> &
-                  JWTPayloadSpec)
+                JWTPayloadSpec)
             | false
         > => {
             if (!jwt) return false
 
             try {
-                const data: any = (await jwtVerify(jwt, key)).payload
+                // note: this is to satisfy typescript.
+                const data: any = (
+                    await (verifyKey(jwt, options)
+                        .catch(async (error) => {
+                            if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
+                                for await (const publicKey of error) {
+                                    try {
+                                        return await jwtVerify(jwt, publicKey, options)
+                                    }
+                                    catch (innerError: any) {
+                                        if ('code' in innerError && innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+                                            continue;
+                                        }
+
+                                        throw innerError
+                                    }
+                                }
+
+                                throw new errors.JWSSignatureVerificationFailed()
+                            }
+
+                            throw error
+                        }))
+                ).payload
 
                 if (validator && !validator!.Check(data))
                     throw new ValidationError('JWT', validator, data)
