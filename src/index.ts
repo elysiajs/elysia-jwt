@@ -84,7 +84,7 @@ const verifier = (key: Uint8Array | KeyLike | JWTVerifyGetKey): {
     return typeof key === 'function'
         ? (jwt, options) => jwtVerify<any>(jwt, key, options)
         : (jwt, options) => jwtVerify(jwt, key, options)
-    ;
+        ;
 }
 
 export const jwt = <
@@ -177,27 +177,28 @@ export const jwt = <
 
             try {
                 // note: this is to satisfy typescript.
-                const data: any = (await verifyKey(jwt, options)
-                    .catch(async (error) => {
-                        if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
-                            for await (const publicKey of error) {
-                                try {
-                                    return await jwtVerify(jwt, publicKey, options)
-                                }
-                                catch (innerError: any) {
-                                    if ('code' in innerError && innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
-                                        continue;
+                const data: any = (
+                    await (verifyKey(jwt, options)
+                        .catch(async (error) => {
+                            if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
+                                for await (const publicKey of error) {
+                                    try {
+                                        return await jwtVerify(jwt, publicKey, options)
                                     }
+                                    catch (innerError: any) {
+                                        if ('code' in innerError && innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+                                            continue;
+                                        }
 
-                                    throw innerError
+                                        throw innerError
+                                    }
                                 }
+
+                                throw new errors.JWSSignatureVerificationFailed()
                             }
 
-                            throw new errors.JWSSignatureVerificationFailed()
-                        }
-
-                        throw error
-                    })
+                            throw error
+                        }))
                 ).payload
 
                 if (validator && !validator!.Check(data))
