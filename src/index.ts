@@ -78,6 +78,15 @@ export interface JWTOption<
     exp?: string | number
 }
 
+const verifier = (key: Uint8Array | KeyLike | JWTVerifyGetKey): {
+    (jwt: string, options?: JWTVerifyOptions): Promise<JWTVerifyResult>
+} => {
+    return typeof key === 'function'
+        ? (jwt, options) => jwtVerify<any>(jwt, key, options)
+        : (jwt, options) => jwtVerify(jwt, key, options)
+    ;
+}
+
 export const jwt = <
     const Name extends string = 'jwt',
     const Schema extends TSchema | undefined = undefined
@@ -99,11 +108,7 @@ export const jwt = <
 
     const key =
         typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
-    const verifier: {
-        (jwt: string, options?: JWTVerifyOptions): Promise<JWTVerifyResult>
-    } = typeof key === 'function'
-        ? (jwt, options) => jwtVerify(jwt, key, options)
-        : (jwt, options) => jwtVerify(jwt, key, options);
+    const verifyKey = verifier(key);
     const validator = schema
         ? getSchemaValidator(
             t.Intersect([
@@ -172,7 +177,7 @@ export const jwt = <
 
             try {
                 // note: this is to satisfy typescript.
-                const data: any = (await verifier(jwt, options)
+                const data: any = (await verifyKey(jwt, options)
                     .catch(async (error) => {
                         if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
                             for await (const publicKey of error) {
