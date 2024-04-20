@@ -97,7 +97,6 @@ export const jwt = <
 
     const key =
         typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
-    // note: this is to satisfy typescript.
     const verifier = typeof key === 'function' ? (jwt: string) => jwtVerify(jwt, key) : (jwt: string) => jwtVerify(jwt, key);
     const validator = schema
         ? getSchemaValidator(
@@ -165,6 +164,7 @@ export const jwt = <
             if (!jwt) return false
 
             try {
+                // note: this is to satisfy typescript.
                 const data: any = (await verifier(jwt)
                     .catch(async (error) => {
                         if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
