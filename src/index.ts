@@ -148,6 +148,10 @@ export const jwt = <
             if (nbf) jwt = jwt.setNotBefore(nbf)
             if (exp) jwt = jwt.setExpirationTime(exp)
 
+            if (!('type' in key) && !(key instanceof Uint8Array)) {
+                throw new TypeError('Cannot use that secret to sign, likely only verify.');
+            }
+
             return jwt.sign(key)
         },
         verify: async (
@@ -160,15 +164,17 @@ export const jwt = <
             if (!jwt) return false
 
             try {
-                const data: any = (await jwtVerify(jwt, key)
+                // note: this is to satisfy typescript.
+                const verification = typeof key === 'function' ? jwtVerify(jwt, key) : jwtVerify(jwt, key);
+                const data: any = (await verification
                     .catch(async (error) => {
                         if (error?.code === 'ERR_JWKS_MULTIPLE_MATCHING_KEYS') {
                             for await (const publicKey of error) {
                                 try {
                                     return await jwtVerify(jwt, publicKey)
                                 }
-                                catch (innerError) {
-                                    if (innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
+                                catch (innerError: any) {
+                                    if ('code' in innerError && innerError?.code === 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED') {
                                         continue;
                                     }
 
