@@ -43,4 +43,30 @@ describe('Static Plugin', () => {
 
         expect(name).toBe(signed.name)
     })
+
+    it('no aot', async () => {
+
+        const native = globalThis.Function
+
+        let fnUsed = false
+
+        // @ts-ignore
+        globalThis.Function = () => {
+            fnUsed = true
+            return () => {}
+        }
+
+        jwt({
+            name: 'jwt',
+            secret: 'A',
+            aot: false,
+            schema: t.Object({
+                id: t.Number()
+            })
+        })
+
+        globalThis.Function = native
+
+        expect(fnUsed).toBeFalse()
+    })
 })
