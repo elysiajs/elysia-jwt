@@ -72,6 +72,12 @@ export interface JWTOption<
      * @see [RFC7519#section-4.1.4](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4)
      */
     exp?: string | number
+    /**
+	 * Disable Ahead of Time compliation
+	 *
+	 * Reduced performance but faster startup time
+	 */
+    aot?: boolean
 }
 
 export const jwt = <
@@ -88,6 +94,7 @@ export const jwt = <
     // Start JWT Payload
     nbf,
     exp,
+    aot = true,
     ...payload
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
@@ -95,6 +102,8 @@ JWTOption<Name, Schema>) => {
 
     const key =
         typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
+
+    const dynamic = !aot
 
     const validator = schema
         ? getSchemaValidator(
@@ -112,7 +121,7 @@ JWTOption<Name, Schema>) => {
                       iat: t.Optional(t.String())
                   })
               ]),
-              {}
+              { dynamic }
           )
         : undefined
 
