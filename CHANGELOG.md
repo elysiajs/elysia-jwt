@@ -1,3 +1,6 @@
+# 1.1.1 - 5 Sep 2024
+Feature:
+- add provenance publish
 
 # 1.1.0 - 16 Jul 2024
 Change:
@@ -57,7 +60,7 @@ Change:
 -[#11](https://github.com/elysiajs/elysia-jwt/pull/11) Remove unused imports
 -[#10](https://github.com/elysiajs/elysia-jwt/pull/10) Meaningful type import
 -[#9](https://github.com/elysiajs/elysia-jwt/pull/9) s  Add missing ESLint plugins
--[#8](https://github.com/elysiajs/elysia-jwt/pull/8) Reformat CHANGELOG with 
+-[#8](https://github.com/elysiajs/elysia-jwt/pull/8) Reformat CHANGELOG with
 -[#7](https://github.com/elysiajs/elysia-jwt/pull/7) Format README with Markdownlint
 -[#6](https://github.com/elysiajs/elysia-jwt/pull/6) Correct the schema validation
 -[#5](https://github.com/elysiajs/elysia-jwt/pull/5) Support KeyLike and Uint8Array as secret
