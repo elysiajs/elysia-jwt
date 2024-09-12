@@ -113,7 +113,7 @@ JWTOption<Name, Schema>) => {
 					})
 				]),
 				{}
-		  )
+			)
 		: undefined
 
 	return new Elysia({
