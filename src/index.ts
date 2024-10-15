@@ -22,7 +22,7 @@ export interface JWTPayloadSpec {
 	aud?: string | string[]
 	jti?: string
 	nbf?: number
-	exp?: number
+	exp?: number | string
 	iat?: number
 }
 
