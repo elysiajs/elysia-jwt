@@ -17,13 +17,13 @@ type UnwrapSchema<
 > = Schema extends TSchema ? Static<NonNullable<Schema>> : Fallback
 
 export interface JWTPayloadSpec {
-    iss?: string
-    sub?: string
-    aud?: string | string[]
-    jti?: string
-    nbf?: number
-    exp?: number | string
-    iat?: number
+	iss?: string
+	sub?: string
+	aud?: string | string[]
+	jti?: string
+	nbf?: number
+	exp?: number
+	iat?: number
 }
 
 export interface JWTOption<
