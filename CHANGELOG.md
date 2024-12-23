@@ -1,3 +1,8 @@
+
+# 1.2.0-rc.0 - 23 Dec 2024
+Change:
+- Add support for Elysia 1.2
+
 # 1.1.1 - 5 Sep 2024
 Feature:
 - add provenance publish
