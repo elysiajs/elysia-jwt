@@ -112,7 +112,9 @@ JWTOption<Name, Schema>) => {
 						iat: t.Optional(t.String())
 					})
 				]),
-				{}
+				{
+					modules: t.Module({})
+				}
 			)
 		: undefined
 
