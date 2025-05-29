@@ -5,7 +5,9 @@ import {
 	jwtVerify,
 	type JWTPayload,
 	type JWSHeaderParameters,
-	type KeyLike
+	type CryptoKey,
+	type JWK,
+	type KeyObject
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -53,7 +55,7 @@ export interface JWTOption<
 	/**
 	 * JWT Secret
 	 */
-	secret: string | Uint8Array | KeyLike
+	secret: string | Uint8Array | CryptoKey | JWK | KeyObject
 	/**
 	 * Type strict validation for JWT payload
 	 */
@@ -115,7 +117,7 @@ JWTOption<Name, Schema>) => {
 				{
 					modules: t.Module({})
 				}
-			)
+		  )
 		: undefined
 
 	return new Elysia({
@@ -133,20 +135,32 @@ JWTOption<Name, Schema>) => {
 	}).decorate(name as Name extends string ? Name : 'jwt', {
 		sign(
 			morePayload: UnwrapSchema<Schema, Record<string, string | number>> &
-				JWTPayloadSpec
+				Omit<JWTPayloadSpec, 'exp' | 'nbf'> & {
+					exp?: string | number
+					nbf?: string | number
+				}
 		) {
+			const {
+				exp: morePayloadExp,
+				nbf: morePayloadNbf,
+				...claimsMorePayload
+			} = morePayload
+
 			let jwt = new SignJWT({
 				...payload,
-				...morePayload,
-				nbf: undefined,
-				exp: undefined
+				...claimsMorePayload
 			}).setProtectedHeader({
 				alg,
 				crit
 			})
 
-			if (nbf) jwt = jwt.setNotBefore(nbf)
-			if (exp) jwt = jwt.setExpirationTime(exp)
+			if (morePayloadNbf !== undefined) {
+				jwt = jwt.setNotBefore(morePayloadNbf)
+			}
+
+			if (morePayloadExp !== undefined) {
+				jwt = jwt.setExpirationTime(morePayloadExp)
+			}
 
 			return jwt.sign(key)
 		},
