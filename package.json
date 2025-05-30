@@ -1,56 +1,56 @@
 {
-    "name": "@elysiajs/jwt",
-    "description": "Plugin for Elysia for using JWT Authentication",
-    "version": "1.3.0",
-    "author": {
-        "name": "saltyAom",
-        "url": "https://github.com/SaltyAom",
-        "email": "saltyaom@gmail.com"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/elysiajs/elysia-jwt"
-    },
-    "main": "./dist/cjs/index.js",
-    "module": "./dist/index.mjs",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        "./package.json": "./package.json",
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.mjs",
-            "require": "./dist/cjs/index.js"
-        }
-    },
-    "bugs": "https://github.com/elysiajs/elysia-jwt/issues",
-    "homepage": "https://github.com/elysiajs/elysia-jwt",
-    "keywords": [
-        "elysia",
-        "jwt",
-        "auth",
-        "authentication"
-    ],
-    "license": "MIT",
-    "scripts": {
-        "dev": "bun run --hot example/index.ts",
-        "test": "bun test && npm run test:node",
-        "test:node": "npm install --prefix ./test/node/cjs/ && npm install --prefix ./test/node/esm/ && node ./test/node/cjs/index.js && node ./test/node/esm/index.js",
-        "build": "bun build.ts",
-        "release": "npm run build && npm run test && npm publish --access public"
-    },
-    "dependencies": {
-        "jose": "^4.14.4"
-    },
-    "devDependencies": {
-        "@types/bun": "1.1.14",
-        "@typescript-eslint/eslint-plugin": "^6.6.0",
-        "@typescript-eslint/parser": "^6.6.0",
-        "elysia": ">= 1.3.0-exp.45",
-        "eslint": "9.6.0",
-        "tsup": "^8.1.0",
-        "typescript": "^5.5.3"
-    },
-    "peerDependencies": {
-        "elysia": ">= 1.3.0"
-    }
+	"name": "@elysiajs/jwt",
+	"description": "Plugin for Elysia for using JWT Authentication",
+	"version": "1.3.0",
+	"author": {
+		"name": "saltyAom",
+		"url": "https://github.com/SaltyAom",
+		"email": "saltyaom@gmail.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/elysiajs/elysia-jwt"
+	},
+	"main": "./dist/cjs/index.js",
+	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		"./package.json": "./package.json",
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.mjs",
+			"require": "./dist/cjs/index.js"
+		}
+	},
+	"bugs": "https://github.com/elysiajs/elysia-jwt/issues",
+	"homepage": "https://github.com/elysiajs/elysia-jwt",
+	"keywords": [
+		"elysia",
+		"jwt",
+		"auth",
+		"authentication"
+	],
+	"license": "MIT",
+	"scripts": {
+		"dev": "bun run --hot example/index.ts",
+		"test": "bun test && npm run test:node",
+		"test:node": "npm install --prefix ./test/node/cjs/ && npm install --prefix ./test/node/esm/ && node ./test/node/cjs/index.js && node ./test/node/esm/index.js",
+		"build": "bun build.ts",
+		"release": "npm run build && npm run test && npm publish --access public"
+	},
+	"dependencies": {
+		"jose": "^6.0.11"
+	},
+	"devDependencies": {
+		"@types/bun": "1.2.15",
+		"@typescript-eslint/eslint-plugin": "^8.33.0",
+		"@typescript-eslint/parser": "^8.33.0",
+		"elysia": "^1.3.3",
+		"eslint": "9.27.0",
+		"tsup": "^8.5.0",
+		"typescript": "^5.8.3"
+	},
+	"peerDependencies": {
+		"elysia": ">= 1.3.0"
+	}
 }
