@@ -15,7 +15,7 @@ const post = (path: string, body = {}) =>
 
 const TEST_SECRET = 'A'
 
-describe('Static Plugin', () => {
+describe('JWT Plugin', () => {
 	const app = new Elysia()
 		.use(
 			jwt({

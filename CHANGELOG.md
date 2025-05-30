@@ -1,8 +1,10 @@
+# 1.3.1 - 31 May 2025
+Feature:
+- [#100](https://github.com/elysiajs/elysia-jwt/pull/100) allow dynamic exp/nbf in sign method
 
 # 1.3.0-exp.0 - 23 Apr 2025
 Change:
 - Add support for Elysia 1.3
-
 
 # 1.2.0-rc.0 - 23 Dec 2024
 Change:
