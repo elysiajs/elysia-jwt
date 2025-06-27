@@ -154,12 +154,14 @@ JWTOption<Name, Schema>) => {
 				crit
 			})
 
-			if (morePayloadNbf !== undefined) {
-				jwt = jwt.setNotBefore(morePayloadNbf)
+			const setNbf = morePayloadNbf ?? nbf;
+			if (setNbf !== undefined) {
+				jwt = jwt.setNotBefore(setNbf)
 			}
 
-			if (morePayloadExp !== undefined) {
-				jwt = jwt.setExpirationTime(morePayloadExp)
+			const setExp = morePayloadExp ?? exp;
+			if (setExp !== undefined) {
+				jwt = jwt.setExpirationTime(setExp)
 			}
 
 			return jwt.sign(key)
