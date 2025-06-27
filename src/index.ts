@@ -109,9 +109,9 @@ JWTOption<Name, Schema>) => {
 							t.Union([t.String(), t.Array(t.String())])
 						),
 						jti: t.Optional(t.String()),
-						nbf: t.Optional(t.Union([t.String(), t.Number()])),
-						exp: t.Optional(t.Union([t.String(), t.Number()])),
-						iat: t.Optional(t.String())
+						nbf: t.Optional(t.Number()),
+						exp: t.Optional(t.Number()),
+						iat: t.Optional(t.Number())
 					})
 				]),
 				{
