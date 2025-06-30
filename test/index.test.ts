@@ -27,10 +27,7 @@ describe('JWT Plugin', () => {
 		.post(
 			'/sign-token',
 			({ jwt, body }) =>
-				jwt.sign({
-					name: body.name,
-					exp: '30m'
-				}),
+				jwt.sign(body),
 			{
 				body: t.Object({
 					name: t.String()
