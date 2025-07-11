@@ -13,7 +13,6 @@ bun add @elysiajs/jwt
 ```typescript
 import { Elysia, t } from 'elysia';
 import { jwt } from '@elysiajs/jwt';
-import { cookie } from '@elysiajs/cookie';
 
 const app = new Elysia()
   .use(
@@ -23,9 +22,9 @@ const app = new Elysia()
       secret: 'MY_SECRETS',
     })
   )
-  .use(cookie())
-  .get('/sign/:name', async ({ jwt, cookie, setCookie, params }) => {
-    setCookie('auth', await jwt.sign(params), {
+  .get('/sign/:name', async ({ jwt, cookie: { auth }, params }) => {
+    auth.set({
+      value: await jwt.sign(params),
       httpOnly: true,
     });
 
