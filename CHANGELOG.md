@@ -1,3 +1,13 @@
+# 1.3.2 - 14 Jul 2025
+Bug fix:
+- [#104](https://github.com/elysiajs/elysia-jwt/pull/104) Resolve various issues with payload, schema, and types
+- [#101](https://github.com/elysiajs/elysia-jwt/pull/101) Closes Config exp not encoded in payload
+- [#23](https://github.com/elysiajs/elysia-jwt/pull/23) Closes bug sign args exp type
+- [#98](https://github.com/elysiajs/elysia-jwt/pull/98) Closes verify fails when using schema in Elysia JWT plugin
+- [#52](https://github.com/elysiajs/elysia-jwt/pull/52) Closes iat Type inconsistency
+- [#36](https://github.com/elysiajs/elysia-jwt/pull/36) Closes upgrade dependency "jose" to latest version to fix issues
+- [#19](https://github.com/elysiajs/elysia-jwt/pull/19) Closes Header Parameter is stored in the payload instead of header
+
 # 1.3.1 - 31 May 2025
 Feature:
 - [#100](https://github.com/elysiajs/elysia-jwt/pull/100) allow dynamic exp/nbf in sign method
