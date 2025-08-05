@@ -194,9 +194,16 @@ JWTOption<Name, Schema>) => {
 		}
 	}).decorate(name as Name extends string ? Name : 'jwt', {
 		sign(
-			data: UnwrapSchema<Schema, ClaimType> &
+			signValue: UnwrapSchema<Schema, ClaimType> &
 				JWTPayloadSpec
 		) {
+			const {
+				nbf,
+				exp,
+				iat,
+				...data
+			} = signValue
+
 			/**
 			 * @summary Creates the JWS (JSON Web Signature) header object.
 			 *
@@ -275,7 +282,8 @@ JWTOption<Name, Schema>) => {
 				 */
 				sub: data.sub ?? defaultValues.sub,
 
-				// Includes all other properties from the data source, both standard and custom.
+				// Includes all other properties from the data source, both standard and custom,
+				// excluding standard JWT claims like `nbf`, `exp` and `iat`.
 				...data
 			} as
 				| Omit<JWTPayloadSpec, 'nbf' | 'exp' | 'iat'>
@@ -294,18 +302,21 @@ JWTOption<Name, Schema>) => {
 
 			// Define 'nbf' (Not Before) if a value exists in either data or defaults.
 			// The value from 'data' has priority over 'defaultValues'.
-			if (data.nbf !== undefined || defaultValues.nbf !== undefined) {
-				jwt = jwt.setNotBefore(data.nbf ?? defaultValues.nbf!)
+			const setNbf = "nbf" in signValue ? nbf : defaultValues.nbf
+			if (setNbf !== undefined) {
+				jwt = jwt.setNotBefore(setNbf)
 			}
 
 			// Define 'exp' (Expiration Time) using the same priority logic.
-			if (data.exp !== undefined || defaultValues.exp !== undefined) {
-				jwt = jwt.setExpirationTime(data.exp ?? defaultValues.exp!)
+			const setExp = "exp" in signValue ? exp : defaultValues.exp
+			if (setExp !== undefined) {
+				jwt = jwt.setExpirationTime(setExp)
 			}
 
 			// Define 'iat' (Issued At). If a specific value is provided, use it.
 			// Otherwise, if the claim is just marked as true, set it to the current time.
-			if (defaultValues.iat !== false || data.iat !== false) {
+			const setIat = "iat" in signValue ? iat : defaultValues.iat
+			if (setIat !== false) {
 				jwt = jwt.setIssuedAt(new Date())
 			}
 

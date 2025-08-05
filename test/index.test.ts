@@ -39,6 +39,21 @@ describe('JWT Plugin', () => {
 			}
 		)
 		.post(
+			'/sign-token-disable-exp-and-iat',
+			({ jwt, body }) =>
+				jwt.sign({
+					name: body.name,
+					// nbf: undefined,
+					exp: undefined,
+					iat: false,
+				}),
+			{
+				body: t.Object({
+					name: t.String()
+				})
+			}
+		)
+		.post(
 			'/verify-token',
 			async ({ jwt, body }) => {
 				const verifiedPayload = await jwt.verify(body.token)
@@ -156,5 +171,28 @@ describe('JWT Plugin', () => {
 		expect(verifiedResult.data?.name).toBe(payloadToSign.name)
 		expect(verifiedResult.data?.exp).toBeDefined()
 		expect(verifiedResult.data?.iat).toBeDefined()
+	})
+
+	it('Should allow disabling default values', async () => {
+		const payloadToSign = { name: 'John Doe' }
+
+		const signRequest = post('/sign-token-disable-exp-and-iat', payloadToSign)
+		const signResponse = await app.handle(signRequest)
+		const token = await signResponse.text()
+
+		expect(token.split('.').length).toBe(3)
+
+		const verifyRequest = post('/verify-token', { token })
+		const verifyResponse = await app.handle(verifyRequest)
+
+		const verifiedResult = (await verifyResponse.json()) as {
+			success: boolean
+			data: { name: string; exp: undefined; iat: undefined } | null
+		}
+
+		expect(verifiedResult.success).toBe(true)
+		expect(verifiedResult.data?.name).toBe(payloadToSign.name)
+		expect(verifiedResult.data?.exp).toBeUndefined()
+		expect(verifiedResult.data?.iat).toBeUndefined()
 	})
 })
