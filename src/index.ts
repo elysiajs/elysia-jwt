@@ -22,6 +22,9 @@ type UnwrapSchema<
 	Fallback = unknown
 > = Schema extends TSchema ? Static<NonNullable<Schema>> : Fallback
 
+type AllowClaimValue = string | number | boolean | null | undefined | AllowClaimValue[] | { [key: string]: AllowClaimValue }
+type ClaimType = Record<string, AllowClaimValue>
+
 /**
  * This interface is a specific, strongly-typed representation of the
  * standard claims found in a JWT payload.
@@ -191,7 +194,7 @@ JWTOption<Name, Schema>) => {
 		}
 	}).decorate(name as Name extends string ? Name : 'jwt', {
 		sign(
-			data: UnwrapSchema<Schema, Record<string, string | number>> &
+			data: UnwrapSchema<Schema, ClaimType> &
 				JWTPayloadSpec
 		) {
 			/**
@@ -311,7 +314,7 @@ JWTOption<Name, Schema>) => {
 		async verify(
 			jwt?: string
 		): Promise<
-			| (UnwrapSchema<Schema, Record<string, string | number>> &
+			| (UnwrapSchema<Schema, ClaimType> &
 					JWTPayloadSpec)
 			| false
 		> {
