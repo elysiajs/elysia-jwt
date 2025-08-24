@@ -1,3 +1,12 @@
+# 1.3.3 - 14 Jul 2025
+Feature:
+- [#110](https://github.com/elysiajs/elysia-jwt/pull/110) add optional, typed 'options' argument to jwt.verify() and pass to jose jwtVerify() if present
+
+Bug fix:
+- [#109](https://github.com/elysiajs/elysia-jwt/pull/109) type inconsistencies in JWT payload and improve schema-based inference
+- [#107](https://github.com/elysiajs/elysia-jwt/pull/107) correct iat claim handling and expand allowed claim value type
+- [#105](https://github.com/elysiajs/elysia-jwt/pull/105) adjust README in regard to the cookie plugin
+
 # 1.3.2 - 14 Jul 2025
 Bug fix:
 - [#104](https://github.com/elysiajs/elysia-jwt/pull/104) Resolve various issues with payload, schema, and types

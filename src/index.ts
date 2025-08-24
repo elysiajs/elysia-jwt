@@ -25,7 +25,14 @@ type UnwrapSchema<
 
 type NormalizedClaim = 'nbf' | 'exp' | 'iat'
 
-type AllowClaimValue = string | number | boolean | null | undefined | AllowClaimValue[] | { [key: string]: AllowClaimValue }
+type AllowClaimValue =
+	| string
+	| number
+	| boolean
+	| null
+	| undefined
+	| AllowClaimValue[]
+	| { [key: string]: AllowClaimValue }
 type ClaimType = Record<string, AllowClaimValue>
 
 /**
@@ -92,10 +99,10 @@ export interface JWTPayloadSpec {
 /**
  * This interface defines the shape of JWT payload fields that can be
  * provided as input when creating or signing a token.
- * 
+ *
  * Unlike `JWTPayloadSpec`, values here may be expressed in more flexible forms,
  * such as relative time strings or control flags (e.g., `iat: true`).
- * 
+ *
  * This interface is parsed and normalized by the plugin before becoming part
  * of the final JWT payload.
  */
@@ -213,7 +220,7 @@ JWTOption<Name, Schema>) => {
 						nbf: t.Optional(t.Number()),
 						exp: t.Optional(t.Number()),
 						iat: t.Optional(t.Number())
-					}),
+					})
 				]),
 				{
 					modules: t.Module({})
@@ -231,15 +238,10 @@ JWTOption<Name, Schema>) => {
 		}
 	}).decorate(name as Name extends string ? Name : 'jwt', {
 		sign(
-			data: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
+			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
 				JWTPayloadInput
 		) {
-			const {
-				nbf,
-				exp,
-				iat,
-				...data
-			} = signValue
+			const { nbf, exp, iat, ...data } = signValue
 
 			/**
 			 * @summary Creates the JWS (JSON Web Signature) header object.
@@ -339,20 +341,20 @@ JWTOption<Name, Schema>) => {
 
 			// Define 'nbf' (Not Before) if a value exists in either data or defaults.
 			// The value from 'data' has priority over 'defaultValues'.
-			const setNbf = "nbf" in signValue ? nbf : defaultValues.nbf
+			const setNbf = 'nbf' in signValue ? nbf : defaultValues.nbf
 			if (setNbf !== undefined) {
 				jwt = jwt.setNotBefore(setNbf)
 			}
 
 			// Define 'exp' (Expiration Time) using the same priority logic.
-			const setExp = "exp" in signValue ? exp : defaultValues.exp
+			const setExp = 'exp' in signValue ? exp : defaultValues.exp
 			if (setExp !== undefined) {
 				jwt = jwt.setExpirationTime(setExp)
 			}
 
 			// Define 'iat' (Issued At). If a specific value is provided, use it.
 			// Otherwise, if the claim is just marked as true, set it to the current time.
-			const setIat = "iat" in signValue ? iat : defaultValues.iat
+			const setIat = 'iat' in signValue ? iat : defaultValues.iat
 			if (setIat !== false) {
 				jwt = jwt.setIssuedAt(new Date())
 			}
@@ -371,12 +373,9 @@ JWTOption<Name, Schema>) => {
 
 			try {
 				const data: any = (
-					await
-						(options ?
-							jwtVerify(jwt, key, options)
-							:
-							jwtVerify(jwt, key)
-						)
+					await (options
+						? jwtVerify(jwt, key, options)
+						: jwtVerify(jwt, key))
 				).payload
 
 				if (validator && !validator.Check(data))
