@@ -104,7 +104,7 @@ describe('JWT Plugin', () => {
 		)
 
 	it('should sign JWT and then verify', async () => {
-		const payloadToSign = { name: 'Shirokami' }
+		const payloadToSign = { name: 'Shirakami' }
 
 		const signRequest = post('/sign-token', payloadToSign)
 		const signResponse = await app.handle(signRequest)
