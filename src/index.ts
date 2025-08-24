@@ -12,7 +12,8 @@ import {
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
-	type JoseHeaderParameters
+	type JoseHeaderParameters,
+	type JWTVerifyOptions
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -21,6 +22,8 @@ type UnwrapSchema<
 	Schema extends TSchema | undefined,
 	Fallback = unknown
 > = Schema extends TSchema ? Static<NonNullable<Schema>> : Fallback
+
+type NormalizedClaim = 'nbf' | 'exp' | 'iat'
 
 type AllowClaimValue = string | number | boolean | null | undefined | AllowClaimValue[] | { [key: string]: AllowClaimValue }
 type ClaimType = Record<string, AllowClaimValue>
@@ -69,6 +72,39 @@ export interface JWTPayloadSpec {
 	 *
 	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.5 RFC7519#section-4.1.5}
 	 */
+	nbf?: number
+
+	/**
+	 * JWT Expiration Time
+	 *
+	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4 RFC7519#section-4.1.4}
+	 */
+	exp?: number
+
+	/**
+	 * JWT Issued At
+	 *
+	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.6 RFC7519#section-4.1.6}
+	 */
+	iat?: number
+}
+
+/**
+ * This interface defines the shape of JWT payload fields that can be
+ * provided as input when creating or signing a token.
+ * 
+ * Unlike `JWTPayloadSpec`, values here may be expressed in more flexible forms,
+ * such as relative time strings or control flags (e.g., `iat: true`).
+ * 
+ * This interface is parsed and normalized by the plugin before becoming part
+ * of the final JWT payload.
+ */
+export interface JWTPayloadInput extends Omit<JWTPayloadSpec, NormalizedClaim> {
+	/**
+	 * JWT Not Before
+	 *
+	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.5 RFC7519#section-4.1.5}
+	 */
 	nbf?: string | number
 
 	/**
@@ -85,6 +121,7 @@ export interface JWTPayloadSpec {
 	 */
 	iat?: boolean
 }
+
 /**
  * Defines the types for the header parameters of a JWS.
  *
@@ -117,7 +154,7 @@ export interface JWTOption<
 	Name extends string | undefined = 'jwt',
 	Schema extends TSchema | undefined = undefined
 > extends JWTHeaderParameters,
-		JWTPayloadSpec {
+		JWTPayloadInput {
 	/**
 	 * Name to decorate method as
 	 *
@@ -173,10 +210,10 @@ JWTOption<Name, Schema>) => {
 							t.Union([t.String(), t.Array(t.String())])
 						),
 						jti: t.Optional(t.String()),
-						nbf: t.Optional(t.Union([t.String(), t.Number()])),
-						exp: t.Optional(t.Union([t.String(), t.Number()])),
-						iat: t.Optional(t.Union([t.Number(), t.String()]))
-					})
+						nbf: t.Optional(t.Number()),
+						exp: t.Optional(t.Number()),
+						iat: t.Optional(t.Number())
+					}),
 				]),
 				{
 					modules: t.Module({})
@@ -194,8 +231,8 @@ JWTOption<Name, Schema>) => {
 		}
 	}).decorate(name as Name extends string ? Name : 'jwt', {
 		sign(
-			signValue: UnwrapSchema<Schema, ClaimType> &
-				JWTPayloadSpec
+			data: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
+				JWTPayloadInput
 		) {
 			const {
 				nbf,
@@ -286,7 +323,7 @@ JWTOption<Name, Schema>) => {
 				// excluding standard JWT claims like `nbf`, `exp` and `iat`.
 				...data
 			} as
-				| Omit<JWTPayloadSpec, 'nbf' | 'exp' | 'iat'>
+				| Omit<JWTPayloadInput, NormalizedClaim>
 				| Record<string, unknown>
 
 			let jwt = new SignJWT({ ...JWTPayload }).setProtectedHeader({
@@ -323,18 +360,26 @@ JWTOption<Name, Schema>) => {
 			return jwt.sign(key)
 		},
 		async verify(
-			jwt?: string
+			jwt?: string,
+			options?: JWTVerifyOptions
 		): Promise<
 			| (UnwrapSchema<Schema, ClaimType> &
-					JWTPayloadSpec)
+					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
 			| false
 		> {
 			if (!jwt) return false
 
 			try {
-				const data: any = (await jwtVerify(jwt, key)).payload
+				const data: any = (
+					await
+						(options ?
+							jwtVerify(jwt, key, options)
+							:
+							jwtVerify(jwt, key)
+						)
+				).payload
 
-				if (validator && !validator!.Check(data))
+				if (validator && !validator.Check(data))
 					throw new ValidationError('JWT', validator, data)
 
 				return data
