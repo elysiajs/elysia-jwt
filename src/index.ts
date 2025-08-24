@@ -12,7 +12,8 @@ import {
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
-	type JoseHeaderParameters
+	type JoseHeaderParameters,
+	type JWTVerifyOptions
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -309,7 +310,8 @@ JWTOption<Name, Schema>) => {
 			return jwt.sign(key)
 		},
 		async verify(
-			jwt?: string
+			jwt?: string,
+			options?: JWTVerifyOptions
 		): Promise<
 			| (UnwrapSchema<Schema, Record<string, string | number>> &
 					JWTPayloadSpec)
@@ -318,7 +320,14 @@ JWTOption<Name, Schema>) => {
 			if (!jwt) return false
 
 			try {
-				const data: any = (await jwtVerify(jwt, key)).payload
+				const data: any = (
+					await
+						(options ?
+							jwtVerify(jwt, key, options)
+							:
+							jwtVerify(jwt, key)
+						)
+				).payload
 
 				if (validator && !validator!.Check(data))
 					throw new ValidationError('JWT', validator, data)
