@@ -8,12 +8,15 @@ import {
 
 import {
 	SignJWT,
+	EncryptJWT,
 	jwtVerify,
+	jwtDecrypt,
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
 	type JoseHeaderParameters,
-	type JWTVerifyOptions
+	type JWTVerifyOptions,
+	type JWTDecryptOptions
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -379,6 +382,31 @@ JWTOption<Name, Schema>) => {
 				).payload
 
 				if (validator && !validator.Check(data))
+					throw new ValidationError('JWT', validator, data)
+
+				return data
+			} catch (_) {
+				return false
+			}
+		},
+		async decrypt(
+			jwt?: string,
+			options?: JWTDecryptOptions
+		): Promise<
+			| (UnwrapSchema<Schema, Record<string, string | number>> &
+				JWTPayloadSpec)
+			| false
+			> {
+			if (!jwt) return false
+
+			try {
+				const data: any = (
+					await (options
+						? jwtDecrypt(jwt, key, options)
+						: jwtDecrypt(jwt, key))
+				).payload
+
+				if (validator && !validator!.Check(data))
 					throw new ValidationError('JWT', validator, data)
 
 				return data
