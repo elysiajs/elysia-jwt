@@ -321,9 +321,12 @@ JWTOption<Name, Schema>) => {
 
 			try {
 				const data: any = (
-					options
-						? await jwtVerify(jwt, key, options)
-						: await jwtVerify(jwt, key)
+					await
+						(options ?
+							jwtVerify(jwt, key, options)
+							:
+							jwtVerify(jwt, key)
+						)
 				).payload
 
 				if (validator && !validator!.Check(data))
