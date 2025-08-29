@@ -278,16 +278,14 @@ JWTOption<Name, Schema>) => {
 			)
 		: undefined
 
-	let jwtDecoration: {
-		verify: (jwt?: string, options?: JWTVerifyOptions) =>
-			Promise<
-				| (UnwrapSchema<Schema, ClaimType> & Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
-				| false
-			>
-		sign?: (
-			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> & JWTPayloadInput
-		) => Promise<string>
-	} = {
+	return new Elysia({
+		name: '@elysiajs/jwt',
+		seed: {
+			name,
+			schema,
+			...defaultValues
+		}
+	}).decorate(name as Name extends string ? Name : 'jwt', {
 		verify: async (
 			jwt?: string,
 			options?: JWTVerifyOptions
@@ -301,7 +299,7 @@ JWTOption<Name, Schema>) => {
 			try {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
-				const asymmetricOnly = jwks && !key
+				const asymmetricOnly = jwks && !secret
 				if (isSymmetric && asymmetricOnly) throw new Error('HS* algorithm requires a local secret')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
 				let payload
@@ -314,7 +312,7 @@ JWTOption<Name, Schema>) => {
 					payload = (await jwtVerify(jwt, jwks, jwksVerifyOptions)
 					).payload
 				} else {
-					payload = (await jwtVerify(jwt, key!, options)).payload
+					payload = (await jwtVerify(jwt, key ?? await getKeyForAlg(alg!), options)).payload
 				}
 				const data = payload as UnwrapSchema<Schema, ClaimType> &
 					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>
@@ -326,14 +324,12 @@ JWTOption<Name, Schema>) => {
 			} catch (_) {
 				return false
 			}
-		}
-	}
-	
-	if (secret) {
-		jwtDecoration.sign = async (
+		},
+		sign: async (
 			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
 				JWTPayloadInput
 		) => {
+			if (!secret) throw new Error('Signing requires a local "secret" to be provided')
 			const { nbf, exp, iat, ...data } = signValue
 
 			/**
@@ -459,16 +455,7 @@ JWTOption<Name, Schema>) => {
 
 			return jwt.sign((key ?? await getKeyForAlg(JWTHeader.alg!)) )
 		}
-	}
-
-	return new Elysia({
-		name: '@elysiajs/jwt',
-		seed: {
-			name,
-			schema,
-			...defaultValues
-		}
-	}).decorate(name as Name extends string ? Name : 'jwt', jwtDecoration)
+	})
 }
 
 export default jwt
