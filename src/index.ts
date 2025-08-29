@@ -267,7 +267,7 @@ JWTOption<Name, Schema>) => {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
-				let data
+				let data: any
 				if (remoteJwks && !isSymmetric) {
 					data = (await jwtVerify(jwt, remoteJwks, options)).payload
 				} else {
