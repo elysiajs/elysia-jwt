@@ -13,7 +13,8 @@ import {
 	type JWK,
 	type KeyObject,
 	type JoseHeaderParameters,
-	type JWTVerifyOptions
+	type JWTVerifyOptions,
+	type JWTVerifyGetKey
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -186,6 +187,10 @@ export interface JWTOption<
 	 */
 	secret: string | Uint8Array | CryptoKey | JWK | KeyObject
 	/**
+	 * Remote JWKS
+	 */
+	remoteJwks?: JWTVerifyGetKey
+	/**
 	 * Type strict validation for JWT payload
 	 */
 	schema?: Schema
@@ -197,6 +202,7 @@ export const jwt = <
 >({
 	name = 'jwt' as Name,
 	secret,
+	remoteJwks,
 	schema,
 	...defaultValues
 }: // End JWT Payload
@@ -233,6 +239,7 @@ JWTOption<Name, Schema>) => {
 		seed: {
 			name,
 			secret,
+			remoteJwks,
 			schema,
 			...defaultValues
 		}
@@ -372,11 +379,20 @@ JWTOption<Name, Schema>) => {
 			if (!jwt) return false
 
 			try {
-				const data: any = (
+				let data: any;
+				if (remoteJwks) {
+				data = (
+					await (options
+						? jwtVerify(jwt, remoteJwks, options)
+						: jwtVerify(jwt, remoteJwks))
+				).payload
+				} else {
+				data = (
 					await (options
 						? jwtVerify(jwt, key, options)
 						: jwtVerify(jwt, key))
 				).payload
+				}
 
 				if (validator && !validator.Check(data))
 					throw new ValidationError('JWT', validator, data)
