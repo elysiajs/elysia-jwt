@@ -9,6 +9,7 @@ import {
 import {
 	SignJWT,
 	jwtVerify,
+	decodeProtectedHeader,
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
@@ -158,43 +159,60 @@ export interface JWTHeaderParameters extends JoseHeaderParameters {
 	crit?: string[]
 }
 
-export interface JWTOption<
+type BaseJWTOption<Name extends string | undefined, Schema extends TSchema | undefined> =
+	JWTHeaderParameters & JWTPayloadInput & {
+		/**
+		 * Name to decorate method as
+		 *
+		 * ---
+		 * @example
+		 * For example, `jwt` will decorate Context with `Context.jwt`
+		 *
+		 * ```typescript
+		 * app
+		 *     .decorate({
+		 *         name: 'myJWTNamespace',
+		 *         secret: process.env.JWT_SECRETS
+		 *     })
+		 *     .get('/sign/:name', ({ myJWTNamespace, params }) => {
+		 *         return myJWTNamespace.sign(params)
+		 *     })
+		 * ```
+		 */
+		name?: Name
+		/**
+		 * Type strict validation for JWT payload
+		 */
+		schema?: Schema
+	}
+
+export type JWTOption<
 	Name extends string | undefined = 'jwt',
 	Schema extends TSchema | undefined = undefined
-> extends JWTHeaderParameters,
-		JWTPayloadInput {
-	/**
-	 * Name to decorate method as
-	 *
-	 * ---
-	 * @example
-	 * For example, `jwt` will decorate Context with `Context.jwt`
-	 *
-	 * ```typescript
-	 * app
-	 *     .decorate({
-	 *         name: 'myJWTNamespace',
-	 *         secret: process.env.JWT_SECRETS
-	 *     })
-	 *     .get('/sign/:name', ({ myJWTNamespace, params }) => {
-	 *         return myJWTNamespace.sign(params)
-	 *     })
-	 * ```
-	 */
-	name?: Name
-	/**
-	 * JWT Secret
-	 */
-	secret: string | Uint8Array | CryptoKey | JWK | KeyObject
-	/**
-	 * Remote JWKS
-	 */
-	remoteJwks?: JWTVerifyGetKey
-	/**
-	 * Type strict validation for JWT payload
-	 */
-	schema?: Schema
-}
+> =
+	| (BaseJWTOption<Name, Schema> & {
+		/**
+		 * JWT Secret
+		 */
+		secret: string | Uint8Array | CryptoKey | JWK | KeyObject
+		/**
+		 * Remote JWKS
+		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
+		 */
+		remoteJwks?: JWTVerifyGetKey
+	})
+	| (BaseJWTOption<Name, Schema> & {
+		/**
+		 * JWT Secret
+		 */
+		secret?: string | Uint8Array | CryptoKey | JWK | KeyObject
+		/**
+		 * Remote JWKS
+		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
+		 */
+		remoteJwks: JWTVerifyGetKey
+	})
+
 
 export const jwt = <
 	const Name extends string = 'jwt',
@@ -234,20 +252,42 @@ JWTOption<Name, Schema>) => {
 			)
 		: undefined
 
-	return new Elysia({
-		name: '@elysiajs/jwt',
-		seed: {
-			name,
-			secret,
-			remoteJwks,
-			schema,
-			...defaultValues
-		}
-	}).decorate(name as Name extends string ? Name : 'jwt', {
-		sign(
+	let jwtDecoration: any = {};
+	jwtDecoration.verify = async (
+			jwt?: string,
+			options?: JWTVerifyOptions
+		): Promise<
+			| (UnwrapSchema<Schema, ClaimType> &
+					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
+			| false
+		> => {
+			if (!jwt) return false
+
+			try {
+				const { alg } = decodeProtectedHeader(jwt)
+				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
+				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
+				let data: any
+				if (remoteJwks && !isSymmetric) {
+					data = (await jwtVerify(jwt, remoteJwks, options)).payload
+				} else {
+					data = (await jwtVerify(jwt, (key as Exclude<typeof key, undefined>), options)).payload
+				}
+
+				if (validator && !validator.Check(data))
+					throw new ValidationError('JWT', validator, data)
+
+				return data
+			} catch (_) {
+				return false
+			}
+	}
+	
+	if (secret) {
+		jwtDecoration.sign = (
 			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
 				JWTPayloadInput
-		) {
+		) => {
 			const { nbf, exp, iat, ...data } = signValue
 
 			/**
@@ -367,42 +407,19 @@ JWTOption<Name, Schema>) => {
 			}
 
 			return jwt.sign(key)
-		},
-		async verify(
-			jwt?: string,
-			options?: JWTVerifyOptions
-		): Promise<
-			| (UnwrapSchema<Schema, ClaimType> &
-					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
-			| false
-		> {
-			if (!jwt) return false
-
-			try {
-				let data: any;
-				if (remoteJwks) {
-					data = (
-						await (options
-							? jwtVerify(jwt, remoteJwks, options)
-							: jwtVerify(jwt, remoteJwks))
-					).payload
-				} else {
-					data = (
-						await (options
-							? jwtVerify(jwt, key, options)
-							: jwtVerify(jwt, key))
-					).payload
-				}
-
-				if (validator && !validator.Check(data))
-					throw new ValidationError('JWT', validator, data)
-
-				return data
-			} catch (_) {
-				return false
-			}
 		}
-	})
+	}
+
+	return new Elysia({
+		name: '@elysiajs/jwt',
+		seed: {
+			name,
+			secret,
+			remoteJwks,
+			schema,
+			...defaultValues
+		}
+	}).decorate(name as Name extends string ? Name : 'jwt', jwtDecoration)
 }
 
 export default jwt
