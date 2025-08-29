@@ -9,13 +9,13 @@ import {
 import {
 	SignJWT,
 	jwtVerify,
-	createRemoteJWKSet,
 	decodeProtectedHeader,
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
 	type JoseHeaderParameters,
-	type JWTVerifyOptions
+	type JWTVerifyOptions,
+	type JWTVerifyGetKey
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -199,7 +199,7 @@ export type JWTOption<
 		 * Remote JWKS
 		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
 		 */
-		remoteJwksUrl?: string | URL
+		remoteJwks?: JWTVerifyGetKey
 	})
 	| (BaseJWTOption<Name, Schema> & {
 		/**
@@ -210,7 +210,7 @@ export type JWTOption<
 		 * Remote JWKS
 		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
 		 */
-		remoteJwksUrl: string | URL
+		remoteJwks: JWTVerifyGetKey
 	})
 
 	const ASYMMETRIC_VERIFICATION_ALGS = [
@@ -228,19 +228,12 @@ export const jwt = <
 >({
 	name = 'jwt' as Name,
 	secret,
-	remoteJwksUrl,
+	remoteJwks,
 	schema,
 	...defaultValues
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
-	if (!secret && !remoteJwksUrl) throw new Error('Either "secret" or "remoteJwksUrl" must be provided')
-
-	const remoteJwks = remoteJwksUrl
-		? createRemoteJWKSet(
-			typeof remoteJwksUrl === 'string'
-				? new URL(remoteJwksUrl)
-				: remoteJwksUrl)
-		: undefined
+	if (!secret && !remoteJwks) throw new Error('Either "secret" or "remoteJwks" must be provided')
 
 	const key = secret
 		? (typeof secret === 'string' ? new TextEncoder().encode(secret) : secret)
@@ -291,11 +284,11 @@ JWTOption<Name, Schema>) => {
 			try {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
-				const remoteOnly = remoteJwksUrl && !key
+				const remoteOnly = remoteJwks && !key
 				if (isSymmetric && remoteOnly) throw new Error('HS* algorithm requires a local secret')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
 				let payload
-				if (remoteJwksUrl && !isSymmetric) {
+				if (remoteJwks && !isSymmetric) {
 					const remoteVerifyOptions: JWTVerifyOptions = !options
 						? { algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
 						: (!options.algorithms
