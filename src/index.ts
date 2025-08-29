@@ -309,7 +309,7 @@ JWTOption<Name, Schema>) => {
 					payload = (await jwtVerify(jwt, remoteJwks, remoteVerifyOptions)
 					).payload
 				} else {
-					payload = (await jwtVerify(jwt, (key as Exclude<typeof key, undefined>), options)).payload
+					payload = (await jwtVerify(jwt, key!, options)).payload
 				}
 				const data = payload as UnwrapSchema<Schema, ClaimType> &
 					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>
@@ -445,7 +445,10 @@ JWTOption<Name, Schema>) => {
 			const setIat = 'iat' in signValue ? iat : (defaultValues.iat ?? true)
 			if (setIat === true) {
 				jwt = jwt.setIssuedAt()
-			} else if (setIat) {
+			} else if (typeof setIat === 'number'
+				|| typeof setIat === 'string'
+				|| setIat instanceof Date)
+			{
 				jwt = jwt.setIssuedAt(setIat as string | number | Date)
 			}
 
@@ -457,8 +460,6 @@ JWTOption<Name, Schema>) => {
 		name: '@elysiajs/jwt',
 		seed: {
 			name,
-			secret,
-			remoteJwks,
 			schema,
 			...defaultValues
 		}
