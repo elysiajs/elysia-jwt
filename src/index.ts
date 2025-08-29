@@ -128,7 +128,7 @@ export interface JWTPayloadInput extends Omit<JWTPayloadSpec, NormalizedClaim> {
 	 *
 	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.6 RFC7519#section-4.1.6}
 	 */
-	iat?: true | number | string | Date
+	iat?: boolean | number | string | Date
 }
 
 /**
@@ -435,7 +435,7 @@ JWTOption<Name, Schema>) => {
 			const setIat = 'iat' in signValue ? iat : (defaultValues.iat ?? true)
 			if (setIat === true) {
 				jwt = jwt.setIssuedAt(new Date())
-			} else {
+			} else if (setIat) {
 				jwt = jwt.setIssuedAt(new Date(setIat as string | number | Date))
 			}
 
