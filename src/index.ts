@@ -9,13 +9,13 @@ import {
 import {
 	SignJWT,
 	jwtVerify,
+	createRemoteJWKSet,
 	decodeProtectedHeader,
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
 	type JoseHeaderParameters,
-	type JWTVerifyOptions,
-	type JWTVerifyGetKey
+	type JWTVerifyOptions
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -172,7 +172,7 @@ type BaseJWTOption<Name extends string | undefined, Schema extends TSchema | und
 		 * app
 		 *     .decorate({
 		 *         name: 'myJWTNamespace',
-		 *         secret: process.env.JWT_SECRETS
+		 *         secret: process.env.JWT_SECRET
 		 *     })
 		 *     .get('/sign/:name', ({ myJWTNamespace, params }) => {
 		 *         return myJWTNamespace.sign(params)
@@ -199,7 +199,7 @@ export type JWTOption<
 		 * Remote JWKS
 		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
 		 */
-		remoteJwks?: JWTVerifyGetKey
+		remoteJwksUrl?: string | URL
 	})
 	| (BaseJWTOption<Name, Schema> & {
 		/**
@@ -210,7 +210,7 @@ export type JWTOption<
 		 * Remote JWKS
 		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
 		 */
-		remoteJwks: JWTVerifyGetKey
+		remoteJwksUrl: string | URL
 	})
 
 	const ASYMMETRIC_VERIFICATION_ALGS = [
@@ -228,24 +228,20 @@ export const jwt = <
 >({
 	name = 'jwt' as Name,
 	secret,
-	remoteJwks,
+	remoteJwksUrl,
 	schema,
 	...defaultValues
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
-	if (!secret && !remoteJwks) throw new Error ('Either "secret" or "remoteJwks" must be provided')
+	if (!secret && !remoteJwksUrl) throw new Error('Either "secret" or "remoteJwksUrl" must be provided')
 
-	let jwtDecoration: {
-		verify: (jwt?: string, options?: JWTVerifyOptions) =>
-		Promise<
-			| (UnwrapSchema<Schema, ClaimType> & Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
-			| false
-		>
-		sign?: (
-			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> & JWTPayloadInput
-		) => Promise<string>
-	} = {} as any
-	
+	const remoteJwks = remoteJwksUrl
+		? createRemoteJWKSet(
+			typeof remoteJwksUrl === 'string'
+				? new URL(remoteJwksUrl)
+				: remoteJwksUrl)
+		: undefined
+
 	const key = secret
 		? (typeof secret === 'string' ? new TextEncoder().encode(secret) : secret)
 		: undefined
@@ -272,7 +268,17 @@ JWTOption<Name, Schema>) => {
 			)
 		: undefined
 
-	jwtDecoration.verify = async (
+	let jwtDecoration: {
+		verify: (jwt?: string, options?: JWTVerifyOptions) =>
+			Promise<
+				| (UnwrapSchema<Schema, ClaimType> & Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
+				| false
+			>
+		sign?: (
+			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> & JWTPayloadInput
+		) => Promise<string>
+	} = {
+		verify: async (
 			jwt?: string,
 			options?: JWTVerifyOptions
 		): Promise<
@@ -285,15 +291,17 @@ JWTOption<Name, Schema>) => {
 			try {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
-				const remoteOnly = remoteJwks && !key
+				const remoteOnly = remoteJwksUrl && !key
 				if (isSymmetric && remoteOnly) throw new Error('HS* algorithm requires a local secret')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
 				let payload
-				if (remoteJwks && !isSymmetric) {
-					payload = (await jwtVerify(jwt, remoteJwks,
-						!options?.algorithms
-							? { ...options, algorithms: (ASYMMETRIC_VERIFICATION_ALGS as unknown as string[]) }
+				if (remoteJwksUrl && !isSymmetric) {
+					const remoteVerifyOptions: JWTVerifyOptions = !options
+						? { algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
+						: (!options.algorithms
+							? { ...options, algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
 							: options)
+					payload = (await jwtVerify(jwt, remoteJwks!, remoteVerifyOptions)
 					).payload
 				} else {
 					payload = (await jwtVerify(jwt, (key as Exclude<typeof key, undefined>), options)).payload
@@ -308,6 +316,7 @@ JWTOption<Name, Schema>) => {
 			} catch (_) {
 				return false
 			}
+		}
 	}
 	
 	if (secret) {
