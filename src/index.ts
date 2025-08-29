@@ -432,7 +432,7 @@ JWTOption<Name, Schema>) => {
 
 			// Define 'iat' (Issued At). If a specific value is provided, use it.
 			// Otherwise, if the claim is just marked as true, set it to the current time.
-			const setIat = 'iat' in signValue ? iat : defaultValues.iat
+			const setIat = 'iat' in signValue ? iat : (defaultValues.iat ?? true)
 			if (setIat === true) {
 				jwt = jwt.setIssuedAt(new Date())
 			} else {
