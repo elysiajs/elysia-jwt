@@ -204,8 +204,10 @@ export type JWTOption<
 	| (BaseJWTOption<Name, Schema> & {
 		/**
 		 * JWT Secret
+		 * If missing, only asymmetric algorithms will be allowed for verification
+		 * Also, signing will be disabled
 		 */
-		secret?: string | Uint8Array | CryptoKey | JWK | KeyObject
+		secret?: never
 		/**
 		 * Remote JWKS
 		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
