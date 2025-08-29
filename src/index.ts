@@ -381,17 +381,17 @@ JWTOption<Name, Schema>) => {
 			try {
 				let data: any;
 				if (remoteJwks) {
-				data = (
-					await (options
-						? jwtVerify(jwt, remoteJwks, options)
-						: jwtVerify(jwt, remoteJwks))
-				).payload
+					data = (
+						await (options
+							? jwtVerify(jwt, remoteJwks, options)
+							: jwtVerify(jwt, remoteJwks))
+					).payload
 				} else {
-				data = (
-					await (options
-						? jwtVerify(jwt, key, options)
-						: jwtVerify(jwt, key))
-				).payload
+					data = (
+						await (options
+							? jwtVerify(jwt, key, options)
+							: jwtVerify(jwt, key))
+					).payload
 				}
 
 				if (validator && !validator.Check(data))
