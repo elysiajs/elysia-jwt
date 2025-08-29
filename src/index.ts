@@ -213,7 +213,6 @@ export type JWTOption<
 		remoteJwks: JWTVerifyGetKey
 	})
 
-
 export const jwt = <
 	const Name extends string = 'jwt',
 	const Schema extends TSchema | undefined = undefined
@@ -225,10 +224,12 @@ export const jwt = <
 	...defaultValues
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
-	if (!secret) throw new Error("Secret can't be empty")
+	if (!secret && !remoteJwks) throw new Error ('Either "secret" or "remoteJwks" must be provided')
 
-	const key =
-		typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
+	let jwtDecoration: any = {}
+	const key = secret
+		? (typeof secret === 'string' ? new TextEncoder().encode(secret) : secret)
+		: undefined
 
 	const validator = schema
 		? getSchemaValidator(
@@ -252,7 +253,6 @@ JWTOption<Name, Schema>) => {
 			)
 		: undefined
 
-	let jwtDecoration: any = {};
 	jwtDecoration.verify = async (
 			jwt?: string,
 			options?: JWTVerifyOptions
@@ -267,7 +267,7 @@ JWTOption<Name, Schema>) => {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
-				let data: any
+				let data
 				if (remoteJwks && !isSymmetric) {
 					data = (await jwtVerify(jwt, remoteJwks, options)).payload
 				} else {
@@ -406,7 +406,7 @@ JWTOption<Name, Schema>) => {
 				jwt = jwt.setIssuedAt(new Date())
 			}
 
-			return jwt.sign(key)
+			return jwt.sign((key as Exclude<typeof key, undefined>) )
 		}
 	}
 
