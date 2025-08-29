@@ -9,6 +9,7 @@ import {
 import {
 	SignJWT,
 	jwtVerify,
+	importJWK,
 	decodeProtectedHeader,
 	type CryptoKey,
 	type JWK,
@@ -236,9 +237,18 @@ export const jwt = <
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
 	if (!secret && !remoteJwks) throw new Error('Either "secret" or "remoteJwks" must be provided')
+	
+	const getKeyForAlg = (alg: string) => {
+		return importJWK(secret as JWK, alg)
+	}
 
 	const key = secret
-		? (typeof secret === 'string' ? new TextEncoder().encode(secret) : secret)
+		? (typeof secret === 'object'
+			&& ('kty' in (secret as Record<string, unknown>))
+			? undefined
+			: typeof secret === 'string'
+				? new TextEncoder().encode(secret)
+				: secret)
 		: undefined
 
 	const validator = schema
@@ -315,7 +325,7 @@ JWTOption<Name, Schema>) => {
 	}
 	
 	if (secret) {
-		jwtDecoration.sign = (
+		jwtDecoration.sign = async (
 			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
 				JWTPayloadInput
 		) => {
@@ -407,8 +417,8 @@ JWTOption<Name, Schema>) => {
 				| Record<string, unknown>
 
 			let jwt = new SignJWT({ ...JWTPayload }).setProtectedHeader({
-				alg: JWTHeader.alg!,
-				...JWTHeader
+				...JWTHeader,
+				alg: JWTHeader.alg!
 			})
 
 			/**
@@ -434,12 +444,12 @@ JWTOption<Name, Schema>) => {
 			// Otherwise, if the claim is just marked as true, set it to the current time.
 			const setIat = 'iat' in signValue ? iat : (defaultValues.iat ?? true)
 			if (setIat === true) {
-				jwt = jwt.setIssuedAt(new Date())
+				jwt = jwt.setIssuedAt()
 			} else if (setIat) {
-				jwt = jwt.setIssuedAt(new Date(setIat as string | number | Date))
+				jwt = jwt.setIssuedAt(setIat as string | number | Date)
 			}
 
-			return jwt.sign((key as Exclude<typeof key, undefined>) )
+			return jwt.sign((key ?? await getKeyForAlg(JWTHeader.alg!)) )
 		}
 	}
 
