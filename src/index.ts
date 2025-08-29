@@ -294,7 +294,7 @@ JWTOption<Name, Schema>) => {
 						: (!options.algorithms
 							? { ...options, algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
 							: options)
-					payload = (await jwtVerify(jwt, remoteJwks!, remoteVerifyOptions)
+					payload = (await jwtVerify(jwt, remoteJwks, remoteVerifyOptions)
 					).payload
 				} else {
 					payload = (await jwtVerify(jwt, (key as Exclude<typeof key, undefined>), options)).payload
