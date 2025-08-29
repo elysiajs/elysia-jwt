@@ -218,7 +218,9 @@ export type JWTOption<
 	'PS256','PS384','PS512',
 	'ES256','ES384','ES512',
 	'EdDSA'
-	]
+	] as const
+
+	const SYMMETRIC_VERIFICATION_ALGS = ['HS256', 'HS384', 'HS512'] as const
 
 export const jwt = <
 	const Name extends string = 'jwt',
@@ -233,7 +235,17 @@ export const jwt = <
 JWTOption<Name, Schema>) => {
 	if (!secret && !remoteJwks) throw new Error ('Either "secret" or "remoteJwks" must be provided')
 
-	let jwtDecoration: any = {}
+	let jwtDecoration: {
+		verify: (jwt?: string, options?: JWTVerifyOptions) =>
+		Promise<
+			| (UnwrapSchema<Schema, ClaimType> & Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
+			| false
+		>
+		sign?: (
+			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> & JWTPayloadInput
+		) => Promise<string>
+	} = {} as any
+	
 	const key = secret
 		? (typeof secret === 'string' ? new TextEncoder().encode(secret) : secret)
 		: undefined
@@ -280,7 +292,7 @@ JWTOption<Name, Schema>) => {
 				if (remoteJwks && !isSymmetric) {
 					payload = (await jwtVerify(jwt, remoteJwks,
 						!options?.algorithms
-							? { ...options, algorithms: ASYMMETRIC_VERIFICATION_ALGS }
+							? { ...options, algorithms: (ASYMMETRIC_VERIFICATION_ALGS as unknown as string[]) }
 							: options)
 					).payload
 				} else {
