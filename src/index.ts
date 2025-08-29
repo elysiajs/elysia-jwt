@@ -194,26 +194,31 @@ export type JWTOption<
 	| (BaseJWTOption<Name, Schema> & {
 		/**
 		 * JWT Secret
+		 * Signing always uses `secret`
 		 */
 		secret: string | Uint8Array | CryptoKey | JWK | KeyObject
 		/**
-		 * Remote JWKS
-		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
+		 * Local or Remote JWKS
+		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the remote JWKS function
+		 * Use jose's `createLocalJWKSet(...)` to create the local JWKS function
+		 * If both `secret` and `jwks` are provided, `jwks` will be used for verifying asymmetric algorithms
+		 * and `secret` for verifying symmetric algorithms
 		 */
-		remoteJwks?: JWTVerifyGetKey
+		jwks?: JWTVerifyGetKey
 	})
 	| (BaseJWTOption<Name, Schema> & {
 		/**
 		 * JWT Secret
-		 * If missing, only asymmetric algorithms will be allowed for verification
-		 * Also, signing will be disabled
+		 * If missing, signing will be disabled
+		 * Also, only asymmetric algorithms will be allowed for verification through jwks
 		 */
 		secret?: never
 		/**
-		 * Remote JWKS
+		 * Local or Remote JWKS
 		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
+		 * Use jose's `createLocalJWKSet(...)` to create the local JWKS function
 		 */
-		remoteJwks: JWTVerifyGetKey
+		jwks: JWTVerifyGetKey
 	})
 
 	const ASYMMETRIC_VERIFICATION_ALGS = [
@@ -231,12 +236,12 @@ export const jwt = <
 >({
 	name = 'jwt' as Name,
 	secret,
-	remoteJwks,
+	jwks,
 	schema,
 	...defaultValues
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
-	if (!secret && !remoteJwks) throw new Error('Either "secret" or "remoteJwks" must be provided')
+	if (!secret && !jwks) throw new Error('Either "secret" or "jwks" must be provided')
 	
 	const getKeyForAlg = (alg: string) => {
 		return importJWK(secret as JWK, alg)
@@ -296,17 +301,17 @@ JWTOption<Name, Schema>) => {
 			try {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
-				const remoteOnly = remoteJwks && !key
-				if (isSymmetric && remoteOnly) throw new Error('HS* algorithm requires a local secret')
+				const asymmetricOnly = jwks && !key
+				if (isSymmetric && asymmetricOnly) throw new Error('HS* algorithm requires a local secret')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
 				let payload
-				if (remoteJwks && !isSymmetric) {
-					const remoteVerifyOptions: JWTVerifyOptions = !options
+				if (jwks && !isSymmetric) {
+					const jwksVerifyOptions: JWTVerifyOptions = !options
 						? { algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
 						: (!options.algorithms
 							? { ...options, algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
 							: options)
-					payload = (await jwtVerify(jwt, remoteJwks, remoteVerifyOptions)
+					payload = (await jwtVerify(jwt, jwks, jwksVerifyOptions)
 					).payload
 				} else {
 					payload = (await jwtVerify(jwt, key!, options)).payload
