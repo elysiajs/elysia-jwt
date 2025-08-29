@@ -28,7 +28,7 @@ describe('JWT Plugin', () => {
 		.post(
 			'/sign-token',
 			({ jwt, body }) =>
-				jwt.sign({
+				jwt.sign!({
 					name: body.name,
 					exp: '30m'
 				}),
@@ -41,7 +41,7 @@ describe('JWT Plugin', () => {
 		.post(
 			'/sign-token-disable-exp-and-iat',
 			({ jwt, body }) =>
-				jwt.sign({
+				jwt.sign!({
 					name: body.name,
 					// nbf: undefined,
 					exp: undefined,
