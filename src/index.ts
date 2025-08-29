@@ -213,6 +213,13 @@ export type JWTOption<
 		remoteJwks: JWTVerifyGetKey
 	})
 
+	const ASYMMETRIC_VERIFICATION_ALGS = [
+	'RS256','RS384','RS512',
+	'PS256','PS384','PS512',
+	'ES256','ES384','ES512',
+	'EdDSA'
+	]
+
 export const jwt = <
 	const Name extends string = 'jwt',
 	const Schema extends TSchema | undefined = undefined
@@ -266,13 +273,21 @@ JWTOption<Name, Schema>) => {
 			try {
 				const { alg } = decodeProtectedHeader(jwt)
 				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
+				const remoteOnly = remoteJwks && !key
+				if (isSymmetric && remoteOnly) throw new Error('HS* algorithm requires a local secret')
 				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
-				let data: any
+				let payload
 				if (remoteJwks && !isSymmetric) {
-					data = (await jwtVerify(jwt, remoteJwks, options)).payload
+					payload = (await jwtVerify(jwt, remoteJwks,
+						!options?.algorithms
+							? { ...options, algorithms: ASYMMETRIC_VERIFICATION_ALGS }
+							: options)
+					).payload
 				} else {
-					data = (await jwtVerify(jwt, (key as Exclude<typeof key, undefined>), options)).payload
+					payload = (await jwtVerify(jwt, (key as Exclude<typeof key, undefined>), options)).payload
 				}
+				const data = payload as UnwrapSchema<Schema, ClaimType> &
+					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>
 
 				if (validator && !validator.Check(data))
 					throw new ValidationError('JWT', validator, data)
