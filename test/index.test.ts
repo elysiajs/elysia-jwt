@@ -1,8 +1,9 @@
 import { Elysia, t } from 'elysia'
 import { jwt } from '../src'
-import { SignJWT } from 'jose'
+import { createLocalJWKSet, decodeProtectedHeader, exportJWK, generateKeyPair, SignJWT } from 'jose'
 
 import { describe, expect, it } from 'bun:test'
+import { inferBodyReference } from 'elysia/dist/sucrose'
 
 const post = (path: string, body = {}) =>
 	new Request(`http://localhost${path}`, {
@@ -14,6 +15,7 @@ const post = (path: string, body = {}) =>
 	})
 
 const TEST_SECRET = 'A'
+
 
 describe('JWT Plugin', () => {
 	const app = new Elysia()
@@ -28,7 +30,7 @@ describe('JWT Plugin', () => {
 		.post(
 			'/sign-token',
 			({ jwt, body }) =>
-				jwt.sign({
+				jwt.sign!({
 					name: body.name,
 					exp: '30m'
 				}),
@@ -41,7 +43,7 @@ describe('JWT Plugin', () => {
 		.post(
 			'/sign-token-disable-exp-and-iat',
 			({ jwt, body }) =>
-				jwt.sign({
+				jwt.sign!({
 					name: body.name,
 					// nbf: undefined,
 					exp: undefined,
@@ -86,14 +88,14 @@ describe('JWT Plugin', () => {
 					return {
 						success: false,
 						data: null,
-						message: 'exp was not setted on jwt'
+						message: 'exp was not set on jwt'
 					}
 				}
 				if (!verifiedPayload.iat) {
 					return {
 						success: false,
 						data: null,
-						message: 'iat was not setted on jwt'
+						message: 'iat was not set on jwt'
 					}
 				}
 				return { success: true, data: verifiedPayload }
@@ -194,5 +196,51 @@ describe('JWT Plugin', () => {
 		expect(verifiedResult.data?.name).toBe(payloadToSign.name)
 		expect(verifiedResult.data?.exp).toBeUndefined()
 		expect(verifiedResult.data?.iat).toBeUndefined()
+	})
+
+	// Basic JWKS test
+	it('Should verify RS256 via jwks and HS256 via local secret when both are configured',
+		async () => {
+			// RS256 key pair + jwks
+			const { publicKey, privateKey } = await generateKeyPair('RS256')
+			const pubJwk = await exportJWK(publicKey)
+			Object.assign(pubJwk, { alg: 'RS256', kid: 'test' })
+			const getKey = createLocalJWKSet({ keys: [pubJwk] })
+
+			const jwksApp = new Elysia()
+				.use(jwt({ name: 'jwt', secret: TEST_SECRET, jwks: getKey }))
+				.post('/verify', async ({ jwt, body }) => {
+					const token = await jwt.verify(body.token)
+					return {
+						token,
+						ok: !!token
+					}
+				}, {
+					body: t.Object({ token: t.String() })
+				})
+				.post('/sign', async ({ body, jwt }) => await jwt.sign!({
+					name: body.name,
+					exp: undefined,
+					iat: false,
+				}), {
+					body: t.Object({ name: t.String() })
+				})
+
+			// RS256 token -> jwks
+			const rsToken = await new SignJWT({ role: 'local' })
+				.setProtectedHeader({ alg: 'RS256', kid: 'test' })
+				.setExpirationTime('5m')
+				.sign(privateKey)
+			const rsResp = await jwksApp.handle(post('/verify', { token: rsToken }))
+			const rsRespJson = await rsResp.json()
+			expect((rsRespJson.ok)).toBe(true)
+
+			// HS256 token -> local secret
+			const hsSignResp = await jwksApp.handle(post('/sign', { name: 'test' }))
+			const hsToken = await hsSignResp.text()
+			expect(decodeProtectedHeader(hsToken).alg).toBe('HS256')
+			const hsResp = await jwksApp.handle(post('/verify', { token: hsToken }))
+			const hsRespJson = await hsResp.json()
+			expect(hsRespJson.ok).toBe(true)
 	})
 })

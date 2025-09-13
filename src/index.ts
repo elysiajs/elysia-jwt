@@ -9,11 +9,14 @@ import {
 import {
 	SignJWT,
 	jwtVerify,
+	importJWK,
+	decodeProtectedHeader,
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
 	type JoseHeaderParameters,
-	type JWTVerifyOptions
+	type JWTVerifyOptions,
+	type JWTVerifyGetKey
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -126,7 +129,7 @@ export interface JWTPayloadInput extends Omit<JWTPayloadSpec, NormalizedClaim> {
 	 *
 	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.6 RFC7519#section-4.1.6}
 	 */
-	iat?: boolean
+	iat?: boolean | number | string | Date
 }
 
 /**
@@ -157,39 +160,75 @@ export interface JWTHeaderParameters extends JoseHeaderParameters {
 	crit?: string[]
 }
 
-export interface JWTOption<
+type BaseJWTOption<Name extends string | undefined, Schema extends TSchema | undefined> =
+	JWTHeaderParameters & JWTPayloadInput & {
+		/**
+		 * Name to decorate method as
+		 *
+		 * ---
+		 * @example
+		 * For example, `jwt` will decorate Context with `Context.jwt`
+		 *
+		 * ```typescript
+		 * app
+		 *     .decorate({
+		 *         name: 'myJWTNamespace',
+		 *         secret: process.env.JWT_SECRET
+		 *     })
+		 *     .get('/sign/:name', ({ myJWTNamespace, params }) => {
+		 *         return myJWTNamespace.sign(params)
+		 *     })
+		 * ```
+		 */
+		name?: Name
+		/**
+		 * Type strict validation for JWT payload
+		 */
+		schema?: Schema
+	}
+
+export type JWTOption<
 	Name extends string | undefined = 'jwt',
 	Schema extends TSchema | undefined = undefined
-> extends JWTHeaderParameters,
-		JWTPayloadInput {
-	/**
-	 * Name to decorate method as
-	 *
-	 * ---
-	 * @example
-	 * For example, `jwt` will decorate Context with `Context.jwt`
-	 *
-	 * ```typescript
-	 * app
-	 *     .decorate({
-	 *         name: 'myJWTNamespace',
-	 *         secret: process.env.JWT_SECRETS
-	 *     })
-	 *     .get('/sign/:name', ({ myJWTNamespace, params }) => {
-	 *         return myJWTNamespace.sign(params)
-	 *     })
-	 * ```
-	 */
-	name?: Name
-	/**
-	 * JWT Secret
-	 */
-	secret: string | Uint8Array | CryptoKey | JWK | KeyObject
-	/**
-	 * Type strict validation for JWT payload
-	 */
-	schema?: Schema
-}
+> =
+	| (BaseJWTOption<Name, Schema> & {
+		/**
+		 * JWT Secret
+		 * Signing always uses `secret`
+		 */
+		secret: string | Uint8Array | CryptoKey | JWK | KeyObject
+		/**
+		 * Local or Remote JWKS
+		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the remote JWKS function
+		 * Use jose's `createLocalJWKSet(...)` to create the local JWKS function
+		 * If both `secret` and `jwks` are provided, `jwks` will be used for verifying asymmetric algorithms
+		 * and `secret` for verifying symmetric algorithms
+		 */
+		jwks?: JWTVerifyGetKey
+	})
+	| (BaseJWTOption<Name, Schema> & {
+		/**
+		 * JWT Secret
+		 * If missing, signing will be disabled
+		 * Also, only asymmetric algorithms will be allowed for verification through jwks
+		 */
+		secret?: never
+		/**
+		 * Local or Remote JWKS
+		 * Use jose's `createRemoteJWKSet(new URL(...))` to create the JWKS function
+		 * Use jose's `createLocalJWKSet(...)` to create the local JWKS function
+		 */
+		jwks: JWTVerifyGetKey
+	})
+
+	const ASYMMETRIC_VERIFICATION_ALGS = [
+	'RS256','RS384','RS512',
+	'PS256','PS384','PS512',
+	'ES256','ES384','ES512',
+	'EdDSA'
+	] as const
+
+	const SYMMETRIC_VERIFICATION_ALGS = ['HS256', 'HS384', 'HS512'] as const
 
 export const jwt = <
 	const Name extends string = 'jwt',
@@ -197,14 +236,25 @@ export const jwt = <
 >({
 	name = 'jwt' as Name,
 	secret,
+	jwks,
 	schema,
 	...defaultValues
 }: // End JWT Payload
 JWTOption<Name, Schema>) => {
-	if (!secret) throw new Error("Secret can't be empty")
+	if (!secret && !jwks) throw new Error('Either "secret" or "jwks" must be provided')
+	
+	const getKeyForAlg = (alg: string) => {
+		return importJWK(secret as JWK, alg)
+	}
 
-	const key =
-		typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
+	const key = secret
+		? (typeof secret === 'object'
+			&& ('kty' in (secret as Record<string, unknown>))
+			? undefined
+			: typeof secret === 'string'
+				? new TextEncoder().encode(secret)
+				: secret)
+		: undefined
 
 	const validator = schema
 		? getSchemaValidator(
@@ -232,15 +282,54 @@ JWTOption<Name, Schema>) => {
 		name: '@elysiajs/jwt',
 		seed: {
 			name,
-			secret,
 			schema,
 			...defaultValues
 		}
 	}).decorate(name as Name extends string ? Name : 'jwt', {
-		sign(
+		verify: async (
+			jwt?: string,
+			options?: JWTVerifyOptions
+		): Promise<
+			| (UnwrapSchema<Schema, ClaimType> &
+					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
+			| false
+		> => {
+			if (!jwt) return false
+
+			try {
+				const { alg } = decodeProtectedHeader(jwt)
+				const isSymmetric = typeof alg === 'string' && alg.startsWith('HS')
+				const asymmetricOnly = jwks && !secret
+				if (isSymmetric && asymmetricOnly) throw new Error('HS* algorithm requires a local secret')
+				// Prefer local secret for HS*; prefer remote for asymmetric algs when available
+				let payload
+				if (jwks && !isSymmetric) {
+					const jwksVerifyOptions: JWTVerifyOptions = !options
+						? { algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
+						: (!options.algorithms
+							? { ...options, algorithms: [...ASYMMETRIC_VERIFICATION_ALGS] }
+							: options)
+					payload = (await jwtVerify(jwt, jwks, jwksVerifyOptions)
+					).payload
+				} else {
+					payload = (await jwtVerify(jwt, key ?? await getKeyForAlg(alg!), options)).payload
+				}
+				const data = payload as UnwrapSchema<Schema, ClaimType> &
+					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>
+
+				if (validator && !validator.Check(data))
+					throw new ValidationError('JWT', validator, data)
+
+				return data
+			} catch (_) {
+				return false
+			}
+		},
+		sign: async (
 			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
 				JWTPayloadInput
-		) {
+		) => {
+			if (!secret) throw new Error('Signing requires a local "secret" to be provided')
 			const { nbf, exp, iat, ...data } = signValue
 
 			/**
@@ -329,8 +418,8 @@ JWTOption<Name, Schema>) => {
 				| Record<string, unknown>
 
 			let jwt = new SignJWT({ ...JWTPayload }).setProtectedHeader({
-				alg: JWTHeader.alg!,
-				...JWTHeader
+				...JWTHeader,
+				alg: JWTHeader.alg!
 			})
 
 			/**
@@ -354,37 +443,17 @@ JWTOption<Name, Schema>) => {
 
 			// Define 'iat' (Issued At). If a specific value is provided, use it.
 			// Otherwise, if the claim is just marked as true, set it to the current time.
-			const setIat = 'iat' in signValue ? iat : defaultValues.iat
-			if (setIat !== false) {
-				jwt = jwt.setIssuedAt(new Date())
+			const setIat = 'iat' in signValue ? iat : (defaultValues.iat ?? true)
+			if (setIat === true) {
+				jwt = jwt.setIssuedAt()
+			} else if (typeof setIat === 'number'
+				|| typeof setIat === 'string'
+				|| setIat instanceof Date)
+			{
+				jwt = jwt.setIssuedAt(setIat as string | number | Date)
 			}
 
-			return jwt.sign(key)
-		},
-		async verify(
-			jwt?: string,
-			options?: JWTVerifyOptions
-		): Promise<
-			| (UnwrapSchema<Schema, ClaimType> &
-					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
-			| false
-		> {
-			if (!jwt) return false
-
-			try {
-				const data: any = (
-					await (options
-						? jwtVerify(jwt, key, options)
-						: jwtVerify(jwt, key))
-				).payload
-
-				if (validator && !validator.Check(data))
-					throw new ValidationError('JWT', validator, data)
-
-				return data
-			} catch (_) {
-				return false
-			}
+			return jwt.sign((key ?? await getKeyForAlg(JWTHeader.alg!)) )
 		}
 	})
 }
