@@ -8,12 +8,15 @@ import {
 
 import {
 	SignJWT,
+	EncryptJWT,
 	jwtVerify,
+	jwtDecrypt,
 	type CryptoKey,
 	type JWK,
 	type KeyObject,
 	type JoseHeaderParameters,
-	type JWTVerifyOptions
+	type JWTVerifyOptions,
+	type JWTDecryptOptions
 } from 'jose'
 
 import { Type as t } from '@sinclair/typebox'
@@ -157,10 +160,41 @@ export interface JWTHeaderParameters extends JoseHeaderParameters {
 	crit?: string[]
 }
 
+/**
+ * Defines the types for the header parameters of a JWE.
+ *
+ * Much like `JWTPayloadSpec`, this interface is declared to provide strong,
+ * explicit typing, allowing TypeScript to validate the header's structure
+ * and provide accurate autocompletion.
+ *
+ * It can also be modified within the plugin to handle custom header
+ * parameters required for specific development scenarios.
+ * 
+ * 'alg' and 'enc' are required in Compact JWE headers
+ */
+export interface JWEHeaderParameters extends JoseHeaderParameters {
+	/**
+	 * JWE "alg" (Algorithm) Header Parameter
+	 *
+	 * @see {@link https://github.com/panva/jose/issues/210#jwe-alg Algorithm Key Requirements}
+	 */
+	alg?: string
+
+	/**
+	 * JWE "enc" (Encryption Algorithm) Header Parameter
+	 *
+	 * @see {@link https://github.com/panva/jose/issues/210#jwe-alg Algorithm Key Requirements}
+	 */
+	enc?: string
+
+	/** JWE "crit" (Critical) Header Parameter */
+	crit?: string[]
+}
+
 export interface JWTOption<
 	Name extends string | undefined = 'jwt',
 	Schema extends TSchema | undefined = undefined
-> extends JWTHeaderParameters,
+> extends JWTHeaderParameters, JWEHeaderParameters,
 		JWTPayloadInput {
 	/**
 	 * Name to decorate method as
@@ -361,6 +395,133 @@ JWTOption<Name, Schema>) => {
 
 			return jwt.sign(key)
 		},
+		async encrypt(
+			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
+				JWTPayloadInput
+		) {
+			const { nbf, exp, iat, ...data } = signValue
+
+			/**
+			 * @summary Creates the JWE (JSON Web Encryption) header object.
+			 *
+			 * @description
+			 * This constant builds the header part of the JWT, populating it with values
+			 * from a `defaultValues` source object.
+			 *
+			 * It ensures essential fields have safe defaults by using the nullish
+			 * coalescing operator (`??`):
+			 * - `alg` (Algorithm) defaults to 'RSA-OAEP-256' if not provided.
+			 * - `enc` (Encryption Algorithm) defaults to 'A256GCM' if not provided.
+			 * - `cty` (Content Type) defaults to 'JWT' if not provided.
+			 * - `typ` (Type) defaults to 'JWT' if not provided.
+			 *
+			 * The final object is type-asserted as `JWEHeaderParameters` to align with
+			 * the expected JWE header structure.
+			 *
+			 * @property alg - The CEK encryption algorithm (e.g., 'RSA-OAEP-256').
+			 * @property enc - The content encryption algorithm (e.g., 'A256GCM').
+			 * @property [crit] - A list of critical header parameters that must be understood.
+			 * @property [cty] - The content type of the payload.
+			 * @property [jku] - URL for the JSON Web Key Set.
+			 * @property [jwk] - The JSON Web Key corresponding to the key used to sign.
+			 * @property [kid] - A hint indicating which key was used to encrypt the JWT.
+			 * @property typ - The type of the token, typically 'JWT'.
+			 * @property [x5c] - The X.509 certificate chain.
+			 * @property [x5t] - The X.509 certificate SHA-1 thumbprint.
+			 * @property [x5u] - URL for the X.509 certificate chain.
+			 */
+			const JWTHeader = {
+				alg: defaultValues.alg ?? 'RSA-OAEP-256',
+				enc: defaultValues.enc ?? 'A256GCM',
+				crit: defaultValues.crit,
+				cty: defaultValues.cty ?? 'JWT',
+				jku: defaultValues.jku,
+				jwk: defaultValues.jwk,
+				kid: defaultValues.kid,
+				typ: defaultValues.typ ?? 'JWT',
+				x5c: defaultValues.x5c,
+				x5t: defaultValues.x5t,
+				x5u: defaultValues.x5u
+			} as JWEHeaderParameters
+
+			/**
+			 * @summary Constructs a JWT payload object from a given data source.
+			 *
+			 * @description
+			 * This constant assembles the final payload for a JWT by combining standard
+			 * RFC 7519 claims with any other custom data present in the `data` object.
+			 * * The initial properties (`aud`, `iss`, etc.) are explicitly defined for clarity,
+			 * while the spread operator (`...data`) ensures all other properties from the
+			 * source are included.
+			 * * @warning
+			 * The type assertion (`as ...`) is used to satisfy TypeScript but has significant
+			 * trade-offs. By including `Record<string, unknown>`, the object effectively loses
+			 * strong type safety for custom claims, treating them all as potentially unknown.
+			 * This approach should be handled with care, as it bypasses stricter type checking
+			 * in favor of flexibility.
+			 */
+			const JWTPayload = {
+				/**
+				 * Audience (aud): Identifies the recipients that the JWT is intended for.
+				 */
+				aud: data.aud ?? defaultValues.aud,
+
+				/**
+				 * Issuer (iss): Identifies the principal that issued the JWT.
+				 */
+				iss: data.iss ?? defaultValues.iss,
+
+				/**
+				 * JWT ID (jti): Provides a unique identifier for the JWT.
+				 */
+				jti: data.jti ?? defaultValues.jti,
+
+				/**
+				 * Subject (sub): Identifies the principal that is the subject of the JWT.
+				 */
+				sub: data.sub ?? defaultValues.sub,
+
+				// Includes all other properties from the data source, both standard and custom,
+				// excluding standard JWT claims like `nbf`, `exp` and `iat`.
+				...data
+			} as
+				| Omit<JWTPayloadInput, NormalizedClaim>
+				| Record<string, unknown>
+
+			let jwt = new EncryptJWT({ ...JWTPayload }).setProtectedHeader({
+				alg: JWTHeader.alg!,
+				enc: JWTHeader.enc!,
+				...JWTHeader
+			})
+
+			/**
+			 * Sets the time-based claims (nbf, exp, iat) on the JWT.
+			 * The logic prioritizes values from the 'data' object (from the sign function)
+			 * over the 'defaultValues'.
+			 */
+
+			// Define 'nbf' (Not Before) if a value exists in either data or defaults.
+			// The value from 'data' has priority over 'defaultValues'.
+			const setNbf = 'nbf' in signValue ? nbf : defaultValues.nbf
+			if (setNbf !== undefined) {
+				jwt = jwt.setNotBefore(setNbf)
+			}
+
+			// Define 'exp' (Expiration Time) using the same priority logic.
+			const setExp = 'exp' in signValue ? exp : defaultValues.exp
+			if (setExp !== undefined) {
+				jwt = jwt.setExpirationTime(setExp)
+			}
+
+			// Define 'iat' (Issued At). If a specific value is provided, use it.
+			// Otherwise, if the claim is just marked as true, set it to the current time.
+			const setIat = 'iat' in signValue ? iat : defaultValues.iat
+			if (setIat !== false) {
+				jwt = jwt.setIssuedAt(new Date())
+			}
+
+			return jwt.encrypt(key)
+		},
 		async verify(
 			jwt?: string,
 			options?: JWTVerifyOptions
@@ -379,6 +540,31 @@ JWTOption<Name, Schema>) => {
 				).payload
 
 				if (validator && !validator.Check(data))
+					throw new ValidationError('JWT', validator, data)
+
+				return data
+			} catch (_) {
+				return false
+			}
+		},
+		async decrypt(
+			jwt?: string,
+			options?: JWTDecryptOptions
+		): Promise<
+			| (UnwrapSchema<Schema, Record<string, string | number>> &
+				JWTPayloadSpec)
+			| false
+			> {
+			if (!jwt) return false
+
+			try {
+				const data: any = (
+					await (options
+						? jwtDecrypt(jwt, key, options)
+						: jwtDecrypt(jwt, key))
+				).payload
+
+				if (validator && !validator!.Check(data))
 					throw new ValidationError('JWT', validator, data)
 
 				return data
