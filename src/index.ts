@@ -206,22 +206,27 @@ JWTOption<Name, Schema>) => {
 	const key =
 		typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
 
+	const jwtStandardClaims = t.Object({
+		iss: t.Optional(t.String()),
+		sub: t.Optional(t.String()),
+		aud: t.Optional(
+			t.Union([t.String(), t.Array(t.String())])
+		),
+		jti: t.Optional(t.String()),
+		nbf: t.Optional(t.Number()),
+		exp: t.Optional(t.Number()),
+		iat: t.Optional(t.Number())
+	})
+
 	const validator = schema
 		? getSchemaValidator(
-				t.Intersect([
-					schema,
-					t.Object({
-						iss: t.Optional(t.String()),
-						sub: t.Optional(t.String()),
-						aud: t.Optional(
-							t.Union([t.String(), t.Array(t.String())])
-						),
-						jti: t.Optional(t.String()),
-						nbf: t.Optional(t.Number()),
-						exp: t.Optional(t.Number()),
-						iat: t.Optional(t.Number())
-					})
-				]),
+				schema.anyOf
+					? t.Union(
+						schema.anyOf.map((memberSchema: TSchema) =>
+							t.Intersect([memberSchema, jwtStandardClaims])
+						)
+					)
+					: t.Intersect([schema, jwtStandardClaims]),
 				{
 					modules: t.Module({})
 				}
