@@ -39,16 +39,16 @@
         "release": "npm run build && npm run test && npm publish --access public"
     },
     "dependencies": {
-        "jose": "^6.0.11"
+        "jose": "^6.1.0"
     },
     "devDependencies": {
         "@types/bun": "1.2.15",
-        "@typescript-eslint/eslint-plugin": "^8.33.0",
-        "@typescript-eslint/parser": "^8.33.0",
-        "elysia": "1.4.0",
+        "@typescript-eslint/eslint-plugin": "^8.44.0",
+        "@typescript-eslint/parser": "^8.44.0",
+        "elysia": "1.4.6",
         "eslint": "9.27.0",
         "tsup": "^8.5.0",
-        "typescript": "^5.8.3"
+        "typescript": "^5.9.2"
     },
     "peerDependencies": {
         "elysia": ">= 1.4.0"

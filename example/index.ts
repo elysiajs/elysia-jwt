@@ -23,6 +23,11 @@ const app = new Elysia()
         })
 
         return `Sign in as ${auth.value}`
+    },
+    {
+      cookie: t.Object({
+        auth: t.String()
+      })
     })
     .get('/profile', async ({ jwt2, set, cookie: { auth } }) => {
         const profile = await jwt2.verify(auth.value)
@@ -33,5 +38,10 @@ const app = new Elysia()
         }
 
         return `Hello ${profile.name}`
+    },
+    {
+        cookie: t.Object({
+          auth: t.String()
+        })
     })
     .listen(8080)
