@@ -86,7 +86,7 @@ export interface JWTPayloadSpec {
 	 *
 	 * @see {@link https://www.rfc-editor.org/rfc/rfc7519#section-4.1.4 RFC7519#section-4.1.4}
 	 */
-	exp?: number
+	exp?: number | string
 
 	/**
 	 * JWT Issued At
