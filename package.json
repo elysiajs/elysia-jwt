@@ -1,7 +1,7 @@
 {
     "name": "@elysiajs/jwt",
     "description": "Plugin for Elysia for using JWT Authentication",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "author": {
         "name": "saltyAom",
         "url": "https://github.com/SaltyAom",
@@ -32,7 +32,7 @@
     ],
     "license": "MIT",
     "scripts": {
-        "dev": "bun run --hot example/index.ts",
+        "dev": "bun run --watch example/index.ts",
         "test": "bun test && npm run test:node",
         "test:node": "npm install --prefix ./test/node/cjs/ && npm install --prefix ./test/node/esm/ && node ./test/node/cjs/index.js && node ./test/node/esm/index.js",
         "build": "bun build.ts",
@@ -45,12 +45,13 @@
         "@types/bun": "1.2.15",
         "@typescript-eslint/eslint-plugin": "^8.33.0",
         "@typescript-eslint/parser": "^8.33.0",
-        "elysia": "1.4.0",
+        "elysia": "1.4.27",
         "eslint": "9.27.0",
         "tsup": "^8.5.0",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "zod": "^4.3.6"
     },
     "peerDependencies": {
-        "elysia": ">= 1.4.0"
+        "elysia": ">= 1.4.27"
     }
 }

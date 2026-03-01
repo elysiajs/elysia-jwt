@@ -1,10 +1,5 @@
-import {
-	Elysia,
-	ValidationError,
-	getSchemaValidator,
-	type TSchema,
-	type UnwrapSchema as Static
-} from 'elysia'
+import { Elysia, t, ValidationError, getSchemaValidator } from 'elysia'
+import type { AnySchema, UnwrapSchema } from 'elysia/types'
 
 import {
 	SignJWT,
@@ -16,12 +11,9 @@ import {
 	type JWTVerifyOptions
 } from 'jose'
 
-import { Type as t } from '@sinclair/typebox'
-
-type UnwrapSchema<
-	Schema extends TSchema | undefined,
-	Fallback = unknown
-> = Schema extends TSchema ? Static<NonNullable<Schema>> : Fallback
+type Prettify<T> = {
+	[K in keyof T]: T[K]
+} & {}
 
 type NormalizedClaim = 'nbf' | 'exp' | 'iat'
 
@@ -34,6 +26,11 @@ type AllowClaimValue =
 	| AllowClaimValue[]
 	| { [key: string]: AllowClaimValue }
 type ClaimType = Record<string, AllowClaimValue>
+
+type UnwrapSchemaWithFallback<
+	Schema extends AnySchema | undefined,
+	Fallback = unknown
+> = Schema extends AnySchema ? UnwrapSchema<NonNullable<Schema>> : Fallback
 
 /**
  * This interface is a specific, strongly-typed representation of the
@@ -159,7 +156,7 @@ export interface JWTHeaderParameters extends JoseHeaderParameters {
 
 export interface JWTOption<
 	Name extends string | undefined = 'jwt',
-	Schema extends TSchema | undefined = undefined
+	Schema extends AnySchema | undefined = undefined
 > extends JWTHeaderParameters,
 		JWTPayloadInput {
 	/**
@@ -193,7 +190,7 @@ export interface JWTOption<
 
 export const jwt = <
 	const Name extends string = 'jwt',
-	const Schema extends TSchema | undefined = undefined
+	const Schema extends AnySchema | undefined = undefined
 >({
 	name = 'jwt' as Name,
 	secret,
@@ -207,9 +204,9 @@ JWTOption<Name, Schema>) => {
 		typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
 
 	const validator = schema
-		? getSchemaValidator(
-				t.Intersect([
-					schema,
+		? getSchemaValidator(schema, {
+				modules: t.Module({}),
+				validators: [
 					t.Object({
 						iss: t.Optional(t.String()),
 						sub: t.Optional(t.String()),
@@ -221,11 +218,8 @@ JWTOption<Name, Schema>) => {
 						exp: t.Optional(t.Number()),
 						iat: t.Optional(t.Number())
 					})
-				]),
-				{
-					modules: t.Module({})
-				}
-			)
+				]
+			})
 		: undefined
 
 	return new Elysia({
@@ -238,8 +232,13 @@ JWTOption<Name, Schema>) => {
 		}
 	}).decorate(name as Name extends string ? Name : 'jwt', {
 		sign(
-			signValue: Omit<UnwrapSchema<Schema, ClaimType>, NormalizedClaim> &
-				JWTPayloadInput
+			signValue: Prettify<
+				Omit<
+					UnwrapSchemaWithFallback<Schema, ClaimType>,
+					NormalizedClaim
+				> &
+					JWTPayloadInput
+			>
 		) {
 			const { nbf, exp, iat, ...data } = signValue
 
@@ -333,31 +332,19 @@ JWTOption<Name, Schema>) => {
 				...JWTHeader
 			})
 
-			/**
-			 * Sets the time-based claims (nbf, exp, iat) on the JWT.
-			 * The logic prioritizes values from the 'data' object (from the sign function)
-			 * over the 'defaultValues'.
-			 */
-
 			// Define 'nbf' (Not Before) if a value exists in either data or defaults.
 			// The value from 'data' has priority over 'defaultValues'.
 			const setNbf = 'nbf' in signValue ? nbf : defaultValues.nbf
-			if (setNbf !== undefined) {
-				jwt = jwt.setNotBefore(setNbf)
-			}
+			if (setNbf !== undefined) jwt = jwt.setNotBefore(setNbf)
 
 			// Define 'exp' (Expiration Time) using the same priority logic.
 			const setExp = 'exp' in signValue ? exp : defaultValues.exp
-			if (setExp !== undefined) {
-				jwt = jwt.setExpirationTime(setExp)
-			}
+			if (setExp !== undefined) jwt = jwt.setExpirationTime(setExp)
 
 			// Define 'iat' (Issued At). If a specific value is provided, use it.
 			// Otherwise, if the claim is just marked as true, set it to the current time.
 			const setIat = 'iat' in signValue ? iat : defaultValues.iat
-			if (setIat !== false) {
-				jwt = jwt.setIssuedAt(new Date())
-			}
+			if (setIat !== false) jwt = jwt.setIssuedAt(new Date())
 
 			return jwt.sign(key)
 		},
@@ -365,7 +352,7 @@ JWTOption<Name, Schema>) => {
 			jwt?: string,
 			options?: JWTVerifyOptions
 		): Promise<
-			| (UnwrapSchema<Schema, ClaimType> &
+			| (UnwrapSchemaWithFallback<Schema, ClaimType> &
 					Omit<JWTPayloadSpec, keyof UnwrapSchema<Schema, {}>>)
 			| false
 		> {
@@ -382,7 +369,7 @@ JWTOption<Name, Schema>) => {
 					throw new ValidationError('JWT', validator, data)
 
 				return data
-			} catch (_) {
+			} catch {
 				return false
 			}
 		}

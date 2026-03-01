@@ -1,3 +1,7 @@
+# 1.4.1 - 1 Mar 2026
+Improvement:
+- support Standard Schema
+
 # 1.3.3 - 14 Jul 2025
 Feature:
 - [#110](https://github.com/elysiajs/elysia-jwt/pull/110) add optional, typed 'options' argument to jwt.verify() and pass to jose jwtVerify() if present

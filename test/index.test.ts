@@ -1,6 +1,8 @@
 import { Elysia, t } from 'elysia'
-import { jwt } from '../src'
 import { SignJWT } from 'jose'
+import { z } from 'zod'
+
+import { jwt } from '../src'
 
 import { describe, expect, it } from 'bun:test'
 
@@ -45,7 +47,7 @@ describe('JWT Plugin', () => {
 					name: body.name,
 					// nbf: undefined,
 					exp: undefined,
-					iat: false,
+					iat: false
 				}),
 			{
 				body: t.Object({
@@ -176,7 +178,10 @@ describe('JWT Plugin', () => {
 	it('Should allow disabling default values', async () => {
 		const payloadToSign = { name: 'John Doe' }
 
-		const signRequest = post('/sign-token-disable-exp-and-iat', payloadToSign)
+		const signRequest = post(
+			'/sign-token-disable-exp-and-iat',
+			payloadToSign
+		)
 		const signResponse = await app.handle(signRequest)
 		const token = await signResponse.text()
 
@@ -194,5 +199,67 @@ describe('JWT Plugin', () => {
 		expect(verifiedResult.data?.name).toBe(payloadToSign.name)
 		expect(verifiedResult.data?.exp).toBeUndefined()
 		expect(verifiedResult.data?.iat).toBeUndefined()
+	})
+
+	it('support Standard Schema', async () => {
+		const app = new Elysia()
+			.use(
+				jwt({
+					name: 'jwt',
+					secret: TEST_SECRET,
+					schema: z.object({
+						name: z.string()
+					})
+				})
+			)
+			.post(
+				'/sign-token',
+				({ jwt, body: { name } }) =>
+					jwt.sign({
+						name,
+						exp: '30m'
+					}),
+				{
+					body: z.object({
+						name: z.string()
+					})
+				}
+			)
+			.post(
+				'/verify-token',
+				async ({ jwt, body }) => {
+					const verifiedPayload = await jwt.verify(body.token)
+					if (!verifiedPayload)
+						return {
+							success: false,
+							data: null,
+							message: 'Verification failed'
+						}
+
+					return { success: true, data: verifiedPayload }
+				},
+				{
+					body: z.object({ token: z.string() })
+				}
+			)
+
+		const payloadToSign = { name: 'Shirakami' }
+
+		const signRequest = post('/sign-token', payloadToSign)
+		const signResponse = await app.handle(signRequest)
+		const token = await signResponse.text()
+
+		expect(token.split('.').length).toBe(3)
+
+		const verifyRequest = post('/verify-token', { token })
+		const verifyResponse = await app.handle(verifyRequest)
+		const verifiedResult = (await verifyResponse.json()) as {
+			success: boolean
+			data: { name: string; exp: number } | null
+		}
+
+		expect(verifiedResult.success).toBe(true)
+		expect(verifiedResult.data?.name).toBe(payloadToSign.name)
+		expect(verifiedResult.data?.exp).toBeDefined()
 	})
 })
