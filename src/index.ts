@@ -200,8 +200,11 @@ export const jwt = <
 JWTOption<Name, Schema>) => {
 	if (!secret) throw new Error("Secret can't be empty")
 
-	const key =
+	const privateKey =
 		typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
+	const publicKey = typeof privateKey === 'object' && 'd' in privateKey 
+		? (({ d, ...publicJwk }) => publicJwk)(privateKey)
+		: privateKey
 
 	const validator = schema
 		? getSchemaValidator(schema, {
@@ -346,7 +349,7 @@ JWTOption<Name, Schema>) => {
 			const setIat = 'iat' in signValue ? iat : defaultValues.iat
 			if (setIat !== false) jwt = jwt.setIssuedAt(new Date())
 
-			return jwt.sign(key)
+			return jwt.sign(privateKey)
 		},
 		async verify(
 			jwt?: string,
@@ -361,8 +364,8 @@ JWTOption<Name, Schema>) => {
 			try {
 				const data: any = (
 					await (options
-						? jwtVerify(jwt, key, options)
-						: jwtVerify(jwt, key))
+						? jwtVerify(jwt, publicKey, options)
+						: jwtVerify(jwt, publicKey))
 				).payload
 
 				if (validator && !validator.Check(data))
