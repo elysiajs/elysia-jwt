@@ -1,3 +1,7 @@
+# 1.4.2 - 24 Apr 2026
+Chore:
+- Published under @elysia scope
+
 # 1.4.1 - 1 Mar 2026
 Improvement:
 - support Standard Schema
