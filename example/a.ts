@@ -21,22 +21,18 @@ const app = new Elysia()
 			})
 		})
 	)
-	.post(
-		'/sign-token',
-		({ jwt, body: { name } }) =>
-			jwt.sign({
-				name,
-				exp: '30m'
-			}),
-		{
+	.post('/sign-token', {
 			body: z.object({
 				name: z.string()
 			})
-		}
-	)
-	.post(
-		'/verify-token',
-		async ({ jwt, body }) => {
+		}, ({ jwt, body: { name } }) =>
+			jwt.sign({
+				name,
+				exp: '30m'
+			}))
+	.post('/verify-token', {
+			body: z.object({ token: z.string() })
+		}, async ({ jwt, body }) => {
 			const verifiedPayload = await jwt.verify(body.token)
 			if (!verifiedPayload)
 				return {
@@ -46,11 +42,7 @@ const app = new Elysia()
 				}
 
 			return { success: true, data: verifiedPayload }
-		},
-		{
-			body: z.object({ token: z.string() })
-		}
-	)
+		})
 
 const payloadToSign = { name: 'Shirakami' }
 

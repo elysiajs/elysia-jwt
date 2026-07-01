@@ -1,4 +1,4 @@
-import { Elysia, t, ValidationError, getSchemaValidator } from 'elysia'
+import { Elysia, t, ValidationError, Validator } from 'elysia'
 import type { AnySchema, UnwrapSchema } from 'elysia/types'
 
 import {
@@ -204,9 +204,8 @@ JWTOption<Name, Schema>) => {
 		typeof secret === 'string' ? new TextEncoder().encode(secret) : secret
 
 	const validator = schema
-		? getSchemaValidator(schema, {
-				modules: t.Module({}),
-				validators: [
+		? Validator.create(schema as any, {
+				schemas: [
 					t.Object({
 						iss: t.Optional(t.String()),
 						sub: t.Optional(t.String()),

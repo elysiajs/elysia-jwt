@@ -27,37 +27,29 @@ describe('JWT Plugin', () => {
 				//iat: true - default iat included
 			})
 		)
-		.post(
-			'/sign-token',
-			({ jwt, body }) =>
-				jwt.sign({
-					name: body.name,
-					exp: '30m'
-				}),
-			{
+		.post('/sign-token', {
 				body: t.Object({
 					name: t.String()
 				})
-			}
-		)
-		.post(
-			'/sign-token-disable-exp-and-iat',
-			({ jwt, body }) =>
+			}, ({ jwt, body }) =>
+				jwt.sign({
+					name: body.name,
+					exp: '30m'
+				}))
+		.post('/sign-token-disable-exp-and-iat', {
+				body: t.Object({
+					name: t.String()
+				})
+			}, ({ jwt, body }) =>
 				jwt.sign({
 					name: body.name,
 					// nbf: undefined,
 					exp: undefined,
 					iat: false
-				}),
-			{
-				body: t.Object({
-					name: t.String()
-				})
-			}
-		)
-		.post(
-			'/verify-token',
-			async ({ jwt, body }) => {
+				}))
+		.post('/verify-token', {
+				body: t.Object({ token: t.String() })
+			}, async ({ jwt, body }) => {
 				const verifiedPayload = await jwt.verify(body.token)
 				if (!verifiedPayload) {
 					return {
@@ -67,14 +59,10 @@ describe('JWT Plugin', () => {
 					}
 				}
 				return { success: true, data: verifiedPayload }
-			},
-			{
+			})
+		.post('/verify-token-with-exp-and-iat', {
 				body: t.Object({ token: t.String() })
-			}
-		)
-		.post(
-			'/verify-token-with-exp-and-iat',
-			async ({ jwt, body }) => {
+			}, async ({ jwt, body }) => {
 				const verifiedPayload = await jwt.verify(body.token)
 				if (!verifiedPayload) {
 					return {
@@ -99,11 +87,7 @@ describe('JWT Plugin', () => {
 					}
 				}
 				return { success: true, data: verifiedPayload }
-			},
-			{
-				body: t.Object({ token: t.String() })
-			}
-		)
+			})
 
 	it('should sign JWT and then verify', async () => {
 		const payloadToSign = { name: 'Shirakami' }
@@ -212,22 +196,18 @@ describe('JWT Plugin', () => {
 					})
 				})
 			)
-			.post(
-				'/sign-token',
-				({ jwt, body: { name } }) =>
-					jwt.sign({
-						name,
-						exp: '30m'
-					}),
-				{
+			.post('/sign-token', {
 					body: z.object({
 						name: z.string()
 					})
-				}
-			)
-			.post(
-				'/verify-token',
-				async ({ jwt, body }) => {
+				}, ({ jwt, body: { name } }) =>
+					jwt.sign({
+						name,
+						exp: '30m'
+					}))
+			.post('/verify-token', {
+					body: z.object({ token: z.string() })
+				}, async ({ jwt, body }) => {
 					const verifiedPayload = await jwt.verify(body.token)
 					if (!verifiedPayload)
 						return {
@@ -237,11 +217,7 @@ describe('JWT Plugin', () => {
 						}
 
 					return { success: true, data: verifiedPayload }
-				},
-				{
-					body: z.object({ token: z.string() })
-				}
-			)
+				})
 
 		const payloadToSign = { name: 'Shirakami' }
 
