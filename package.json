@@ -1,7 +1,7 @@
 {
     "name": "@elysia/jwt",
     "description": "Elysia plugin to integrate JSON Web Tokens (JWT)",
-    "version": "2.0.0-exp.0",
+    "version": "2.0.0-beta.1",
     "author": {
         "name": "saltyAom",
         "url": "https://github.com/SaltyAom",
@@ -45,13 +45,13 @@
         "@types/bun": "^1.3.14",
         "@typescript-eslint/eslint-plugin": "^8.33.0",
         "@typescript-eslint/parser": "^8.33.0",
-        "elysia": "^2.0.0-exp.23",
+        "elysia": "2.0.0-beta.1",
         "eslint": "9.27.0",
         "tsdown": "^0.22.3",
         "typescript": "^6.0.3",
         "zod": "^4.3.6"
     },
     "peerDependencies": {
-        "elysia": ">= 2.0.0-exp.23"
+        "elysia": ">= 2.0.0-beta.1"
     }
 }
